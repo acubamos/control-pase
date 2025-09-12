@@ -3,7 +3,7 @@ FROM node:22.13.1-alpine AS build-stage
 WORKDIR /app
 
 # 1. Copia solo los manifests para aprovechar la caché
-COPY package.json package-lock.json ./
+COPY package.json ./
 
 # Instalar dependencias
 RUN npm install --legacy-peer-deps
