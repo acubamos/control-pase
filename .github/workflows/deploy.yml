@@ -90,7 +90,7 @@ jobs:
           echo "🚀 Iniciando despliegue..."
           cd "$PROJECT_DIR"
           docker-compose down -v
-#          docker builder prune -af
+          docker builder prune -af
           docker-compose up -d --build
           echo "✅ Despliegue completado"
           

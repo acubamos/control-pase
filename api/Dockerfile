@@ -1,5 +1,5 @@
 # Etapa de construcción con todas las dependencias
-FROM node:22.13.1-alpine AS builder
+FROM node:22.13.1-alpine AS build-stage
 WORKDIR /app
 
 #Arrelgar DNS
@@ -20,7 +20,7 @@ WORKDIR /app
 COPY package*.json ./
 #RUN npm ci --omit=dev
 RUN npm install
-COPY --from=builder /app/dist ./dist
+COPY --from=build-stage /app/dist ./dist
 
 # Expone el puerto y ejecuta la aplicación
 EXPOSE 5000

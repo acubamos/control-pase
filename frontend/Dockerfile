@@ -20,8 +20,8 @@ FROM nginx:1.29.0-alpine3.22 AS production-stage
 WORKDIR /app
 
 # 5. Copia artefacto ya compilado
-COPY --from=builder /app/.output ./.output
+COPY --from=build-stage /app/.output ./.output
 
 ENV NODE_ENV=production
-EXPOSE 3000
+EXPOSE 3001
 CMD ["node", ".output/server/index.mjs"]
