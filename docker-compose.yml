@@ -1,0 +1,92 @@
+services:
+  control-db:
+    image: postgres:17-alpine
+    container_name: control-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+      TZ: America/Havana
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - ./db-data:/var/lib/postgresql/data
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    networks:
+      - control-network   
+
+  api:
+    build: 
+      context: ./api
+    container_name: api
+    restart: always
+    mem_limit: 512m      # Limita la RAM a 512 MB
+    cpus: 0.5            # Limita el uso de CPU a medio núcleo
+    #expose:
+    ports:
+      - "5002:5000"
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USERNAME}
+      DB_PASS: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      NODE_ENV: production
+      TZ: America/Havana
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    depends_on:
+      control-db:
+        condition: service_healthy
+    networks:
+      - control-network
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.apicp.rule=Host(`apicp.acubamos.cu`)"
+      - "traefik.http.routers.apicp.entrypoints=websecure"
+      - "traefik.http.routers.apicp.tls.certresolver=letsencrypt"
+      - "traefik.http.services.apicp.loadbalancer.server.port=5002"
+      - traefik.docker.network=proxy
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    restart: always
+    mem_limit: 512m      # Limita la RAM a 512 MB
+    cpus: 0.5            # Limita el uso de CPU a medio núcleo
+    environment:
+      - TZ=America/Havana
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    networks:
+      - control-network
+      - proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.control.rule=Host(`control.acubamos.cu`)"
+      - "traefik.http.routers.control.entrypoints=websecure"
+      - "traefik.http.routers.control.tls=true"
+      - "traefik.http.services.control.loadbalancer.server.port=3001"
+      - traefik.docker.network=proxy
+
+networks:
+  control-network:
+  proxy:
+    external: true 

@@ -1,0 +1,230 @@
+################################################################################
+# 📦  CI/CD – Deploy vía SCP                                         #
+# --------------------------------------------------------------------------- #
+# • Sube el repo al VPS por SCP                                                #
+# • Hace backup, rebuild y arranca contenedores vía SSH                        #
+# • Si falla, avisa por Telegram y ejecuta rollback                            #
+# • Concurrency para que un push no pise a otro                                #
+################################################################################
+
+name: DEPLOY
+
+on:
+  workflow_run:
+    workflows: ["Deploy test"]
+    types:
+      - completed
+  push:
+    branches: [main]
+
+
+# Evita despliegues simultáneos en la misma rama
+concurrency:
+  group: main
+  cancel-in-progress: true
+
+  ###########################################################################
+  # 1) DEPLOY                                                              #
+  ###########################################################################
+  
+jobs:
+  deploy:
+    if: |
+      (github.event_name == 'push')
+    runs-on: ubuntu-24.04
+    environment: main
+
+    steps:
+    - name: 🛎️ Checkout código
+      uses: actions/checkout@v4
+
+    - name: 🧹 Eliminar carpeta .git antes de transferir
+      run: rm -rf .git
+
+    - name: 📤 Transferir archivos al VPS
+      uses: appleboy/scp-action@v1
+      with:
+        host:     ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        port:     ${{ secrets.SSH_PORT }}
+        key:      ${{ secrets.SSH_PRIVATE_KEY }}
+        source:   "./"
+        target:   "/mnt/Data/control-pase-azumat"
+        strip_components: 1
+
+    - name: 🚀 Ejecutar despliegue en VPS
+      uses: appleboy/ssh-action@v1.2.2
+      id: deploy
+      with:
+        host:     ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key:      ${{ secrets.SSH_PRIVATE_KEY }}
+        port:     ${{ secrets.SSH_PORT }}
+        script: |
+          set -euo pipefail
+          PROJECT_DIR="/mnt/Data/control-pase-azumat"
+          BACKUP_ROOT="/mnt/Data/control-pase-backups"
+
+          echo "🔍 Verificando directorio..."
+          ls -la "$PROJECT_DIR"
+
+          # ---------- BACKUP ----------
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          BACKUP_DIR="$BACKUP_ROOT/$TIMESTAMP"
+          mkdir -p "$BACKUP_DIR"
+          echo "📦 Creando backup en $BACKUP_DIR"
+          
+          # Excluye db-data, backups
+          echo "📦 Creando backup en $BACKUP_DIR"
+          rsync -a --delete \
+            --exclude 'backups' \
+            --exclude 'db-data' \
+            "$PROJECT_DIR/"  "$BACKUP_DIR/"
+          echo "✅ Backup completado"
+
+          # Borrar backups más antiguos de 7 días
+          find "$BACKUP_ROOT" -maxdepth 1 -type d -mtime +7 -exec rm -rf {} \;
+          echo "🗑️ Backups antiguos eliminados"
+
+          # ---------- DEPLOY ----------
+          echo "🚀 Iniciando despliegue..."
+          cd "$PROJECT_DIR"
+          docker-compose down -v
+          docker builder prune -af
+          docker-compose up -d --build
+          echo "✅ Despliegue completado"
+          
+    - name: 📣 Notificar éxito
+      if: success()
+      env:
+        TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
+        COMMIT_URL: https://github.com/${{ github.repository }}/commit/${{ github.sha }}
+      run: |
+        MSG="✅ *Despliegue exitoso en VPS (staging)*  
+        🔧 *Repo:* ${{ github.repository }}  
+        🔢 *Commit:* [Ver cambios]($COMMIT_URL)
+
+        🚀 El sistema fue actualizado correctamente."
+        curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage" \
+          -d chat_id="$TELEGRAM_CHAT" \
+          --data-urlencode "text=$MSG" \
+          -d parse_mode="Markdown" > /dev/null
+
+    - name: 📣 Notificar error
+      if: failure()
+      env:
+        TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        TELEGRAM_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
+        COMMIT_URL: https://github.com/${{ github.repository }}/commit/${{ github.sha }}
+      run: |
+        MSG="❌ *Fallo en despliegue a staging*  
+        🔧 *Repo:* ${{ github.repository }}  
+        🔢 *Commit:* [Ver cambios]($COMMIT_URL)
+
+        🚨 Hubo un error durante el proceso.  
+        Revisar logs para detalles."
+        curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage" \
+          -d chat_id="$TELEGRAM_CHAT" \
+          --data-urlencode "text=$MSG" \
+          -d parse_mode="Markdown" > /dev/null
+#     - name: 📱 Notificar fallo de despliegue a Telegram
+#       if: failure()
+#       uses: appleboy/telegram-action@v1.0.2
+#       with:
+#         to:    ${{ secrets.TELEGRAM_CHAT_ID }}
+#         token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+#         format: html
+#         message: |
+#           ❌ <b>Fallo en el despliegue</b>
+#           • Repositorio: <code>${{ github.repository }}</code>
+#           • Rama: <code>${{ github.ref_name }}</code>
+#           • Commit: <code>${{ github.sha }}</code>
+#           • Autor: <code>${{ github.actor }}</code>
+#           • Fecha: <code>${{ github.event.head_commit.timestamp }}</code>
+#           • <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">Ver pipeline</a>
+#           Se iniciará el proceso de rollback.
+
+#   ###########################################################################
+#   # 2) ROLLBACK (solo si deploy falla)                                      #
+#   ###########################################################################
+#   rollback:
+#     needs: deploy
+#     if: ${{ needs.deploy.result == 'failure' }}
+#     runs-on: ubuntu-24.04
+#     environment: staging
+
+#     steps:
+#     - name: 📱 Notificar inicio de rollback a Telegram
+#       uses: appleboy/telegram-action@v1.0.2
+#       with:
+#         to:    ${{ secrets.TELEGRAM_CHAT_ID }}
+#         token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+#         format: html
+#         message: |
+#           🔄 <b>Inicio de rollback</b>
+#           • Repositorio: <code>${{ github.repository }}</code>
+#           • Rama: <code>${{ github.ref_name }}</code>
+#           • Commit: <code>${{ github.sha }}</code>
+#           • Autor: <code>${{ github.actor }}</code>
+#           • Fecha: <code>${{ github.event.head_commit.timestamp }}</code>
+#           • <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">Ver pipeline</a>
+
+#     - name: 🔄 Restaurar versión anterior
+#       uses: appleboy/ssh-action@v1.2.2
+#       with:
+#         host:     ${{ secrets.SSH_HOST }}
+#         username: ${{ secrets.SSH_USER }}
+#         key:      ${{ secrets.SSH_PRIVATE_KEY }}
+#         port:     ${{ secrets.SSH_PORT }}
+#         script_stop: true
+#         script: |
+#           set -euo pipefail
+#           PROJECT_DIR="/mnt/Data/institucional"
+#           BACKUP_ROOT="/mnt/Data/insti-backups"
+
+#           echo "🔍 Buscando último backup..."
+#           LATEST_BACKUP=$(ls -td "$BACKUP_ROOT"/* | head -1 || true)
+
+#           if [[ -z "$LATEST_BACKUP" ]]; then
+#             echo "❌ No hay backups disponibles"
+#             exit 1
+#           fi
+
+#           echo "📦 Restaurando desde $LATEST_BACKUP"
+
+#           # Limpia proyecto actual excepto volúmenes persistentes
+#           find "$PROJECT_DIR" -mindepth 1 -maxdepth 1 \
+#             ! -name 'db-data' \
+#             ! -name 'certbot' \
+#             -exec rm -rf {} \;
+
+#           # Copia desde backup excluyendo nginx/data* y letsencrypt*
+#           find "$LATEST_BACKUP" -mindepth 1 -maxdepth 1 \
+#             ! -name 'db-data' \
+#             ! -name 'certbot' \
+#             ! -path '*/nginx/data*' \
+#             ! -path '*/nginx/letsencrypt*' \
+#             -exec cp -r {} "$PROJECT_DIR/" \;
+
+#           echo "🔄 Reiniciando servicios..."
+#           cd "$PROJECT_DIR"
+#           docker compose down -v --rmi all || true
+#           docker compose up -d --build
+#           echo "✅ Rollback completado"
+
+#     - name: 📱 Notificar fallo de rollback a Telegram
+#       if: failure()
+#       uses: appleboy/telegram-action@v1.0.2
+#       with:
+#         to:    ${{ secrets.TELEGRAM_CHAT_ID }}
+#         token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+#         format: html
+#         message: |
+#           ❌ <b>Fallo en el rollback</b>
+#           • Repositorio: <code>${{ github.repository }}</code>
+#           • Rama: <code>${{ github.ref_name }}</code>
+#           • Commit: <code>${{ github.sha }}</code>
+#           • Autor: <code>${{ github.actor }}</code>
+#           • Fecha: <code>${{ github.event.head_commit.timestamp }}</code>
+#           • <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">Ver pipeline</a>
