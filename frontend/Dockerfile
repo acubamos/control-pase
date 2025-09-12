@@ -2,14 +2,19 @@
 FROM node:22.13.1-alpine AS build-stage
 WORKDIR /app
 
-# 1. Copia solo los manifests para aprovechar la caché
-COPY package.json ./
+# Configurar el registry correcto ANTES de instalar
+RUN npm config set registry https://registry.npmjs.org/
+RUN npm config set @radix-ui:registry https://registry.npmjs.org/
+
+# Copiar package.json
+COPY package.json package-lock.json* ./
+
+# Verificar la conexión y el paquete
+RUN npm ping
+RUN npm view @radix-ui/react-sheet@1.0.5
 
 # Instalar dependencias
-#RUN npm install --legacy-peer-deps
-
-# 2. Instala **todo**
-RUN npm install --legacy-peer-deps --force
+RUN npm install --legacy-peer-deps
 
 # 3. Copia el resto del código
 COPY . .
