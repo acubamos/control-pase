@@ -9,6 +9,8 @@ COPY package.json ./
 #RUN npm install --legacy-peer-deps
 
 # 2. Instala **todo**
+RUN apt-get update && apt-get install -y python3
+RUN npm config set python /usr/bin/python3
 RUN npm install --legacy-peer-deps --force
 
 # 3. Copia el resto del código
