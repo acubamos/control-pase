@@ -6,10 +6,10 @@ WORKDIR /app
 COPY package.json ./
 
 # Instalar dependencias
-RUN npm install --legacy-peer-deps
+#RUN npm install --legacy-peer-deps
 
 # 2. Instala **todo**
-#RUN npm ci
+RUN npm install
 
 # 3. Copia el resto del código
 COPY . .
