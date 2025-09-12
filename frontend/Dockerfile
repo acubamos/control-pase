@@ -7,16 +7,9 @@ COPY package.json ./
 
 # Instalar dependencias
 #RUN npm install --legacy-peer-deps
-# Install build dependencies
-RUN apt-get update && apt-get install -y \
-    python3 \
-    make \
-    g++ \
-    && rm -rf /var/lib/apt/lists/* \
-    && ln -sf /usr/bin/python3 /usr/bin/python
-# 2. Instala **todo**
 
-RUN npm install --legacy-peer-deps --force
+# 2. Instala **todo**
+RUN npm install  --force
 
 # 3. Copia el resto del código
 COPY . .
