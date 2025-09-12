@@ -9,7 +9,7 @@ COPY package.json ./
 #RUN npm install --legacy-peer-deps
 
 # 2. Instala **todo**
-RUN npm install
+RUN npm install --legacy-peer-deps
 
 # 3. Copia el resto del código
 COPY . .
