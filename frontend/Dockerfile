@@ -5,8 +5,11 @@ WORKDIR /app
 # 1. Copia solo los manifests para aprovechar la caché
 COPY package.json package-lock.json ./
 
+# Instalar dependencias
+RUN npm install --legacy-peer-deps
+
 # 2. Instala **todo**
-RUN npm install
+#RUN npm ci
 
 # 3. Copia el resto del código
 COPY . .
