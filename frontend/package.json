@@ -43,7 +43,7 @@
     "@radix-ui/react-scroll-area": "latest",
     "@radix-ui/react-select": "latest",
     "@radix-ui/react-separator": "latest",
-    
+    "@radix-ui/react-sheet": "^1.0.5",
     "@radix-ui/react-slider": "latest",
     "@radix-ui/react-slot": "latest",
     "@radix-ui/react-switch": "latest",
@@ -54,7 +54,7 @@
     "@radix-ui/react-tooltip": "latest",
     "@sap/hana-client": "latest",
     "bcryptjs": "latest",
-     
+    "better-sqlite3": "latest",
     "class-transformer": "latest",
     "class-validator": "latest",
     "class-variance-authority": "^0.7.1",
@@ -73,7 +73,7 @@
     "mysql2": "latest",
     "next": "14.2.16",
     "next-themes": "latest",
-   
+    "oracledb": "latest",
     "passport": "latest",
     "passport-jwt": "latest",
     "path": "latest",
@@ -91,7 +91,7 @@
     "rxjs": "latest",
     "sonner": "latest",
     "sql.js": "latest",
-    
+    "sqlite3": "latest",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "ts-node": "latest",
@@ -113,5 +113,3 @@
   }
 
 }
-
-
