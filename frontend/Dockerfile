@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # 2. Instala **todo**
-RUN npm ci
+RUN npm install
 
 # 3. Copia el resto del código
 COPY . .
