@@ -1,5 +1,5 @@
 # Etapa de construcción
-FROM node:22.18.0-alpine AS build-stage
+FROM node:22.13.1-alpine AS build-stage
 WORKDIR /app
 
 # 1. Copia solo los manifests para aprovechar la caché

@@ -1,5 +1,5 @@
 # Etapa de construcción con todas las dependencias
-FROM node:22.18.0-alpine AS builder
+FROM node:22.13.1-alpine AS builder
 WORKDIR /app
 
 #Arrelgar DNS
@@ -13,7 +13,7 @@ COPY . .
 RUN npm run build
 
 # Etapa produccion
-FROM node:22.18.0-alpine AS production-stage
+FROM node:22.13.1-alpine AS production-stage
 WORKDIR /app
 
 # Copia los archivos necesarios desde la etapa de construcción
