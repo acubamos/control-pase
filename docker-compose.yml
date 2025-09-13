@@ -4,7 +4,7 @@ services:
     container_name: control-db
     restart: unless-stopped
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -89,4 +89,4 @@ services:
 networks:
   control-network:
   proxy:
-    external: true 
+    external: true
