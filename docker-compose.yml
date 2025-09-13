@@ -31,7 +31,7 @@ services:
     cpus: 0.5            # Limita el uso de CPU a medio núcleo
     #expose:
     ports:
-      - "3001:3001"
+      - "3002:3001"
     environment:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
