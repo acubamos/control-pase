@@ -31,7 +31,7 @@ services:
     cpus: 0.5            # Limita el uso de CPU a medio núcleo
     #expose:
     ports:
-      - "5002:5000"
+      - "3001:3001"
     environment:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
@@ -42,7 +42,7 @@ services:
       NODE_ENV: production
       TZ: America/Havana
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000"]
+      test: ["CMD", "curl", "-f", "http://localhost:3001"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -61,7 +61,7 @@ services:
       - "traefik.http.routers.apicp.rule=Host(`apicp.acubamos.cu`)"
       - "traefik.http.routers.apicp.entrypoints=websecure"
       - "traefik.http.routers.apicp.tls.certresolver=letsencrypt"
-      - "traefik.http.services.apicp.loadbalancer.server.port=5002"
+      - "traefik.http.services.apicp.loadbalancer.server.port=3001"
       - traefik.docker.network=proxy
 
   frontend:
