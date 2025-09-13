@@ -1,15 +1,12 @@
-# Etapa de construcción
-FROM node:22.13.1-alpine AS build-stage
+##### Etapa 1 : build #############################################
+FROM node:22.18.0-alpine AS builder
 WORKDIR /app
 
 # 1. Copia solo los manifests para aprovechar la caché
-COPY package.json ./
-
-# Instalar dependencias
-#RUN npm install --legacy-peer-deps
+COPY package.json package-lock.json ./
 
 # 2. Instala **todo**
-RUN npm install  --force
+RUN npm ci
 
 # 3. Copia el resto del código
 COPY . .
@@ -17,13 +14,12 @@ COPY . .
 # 4. Compila
 RUN npm run build
 
-# Etapa de producción
-FROM nginx:1.29.0-alpine3.22 AS production-stage
-
+##### Etapa 2 : producción ########################################
+FROM node:22.18.0-alpine AS production
 WORKDIR /app
 
 # 5. Copia artefacto ya compilado
-COPY --from=build-stage /app/.output ./.output
+COPY --from=builder /app/.output ./.output
 
 ENV NODE_ENV=production
 EXPOSE 3001
