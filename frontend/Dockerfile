@@ -2,17 +2,20 @@
 FROM node:22.13.1-alpine AS build-stage
 WORKDIR /app
 
+# Instalar pnpm
+RUN npm install -g pnpm
+
 # 1. Copia solo los manifests para aprovechar la caché
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml ./
 
 # Instalar dependencias
-RUN npm ci --only=production --ignore-scripts
+RUN pnpm install --prod --frozen-lockfile
 
 # 2. Copia el resto del código
 COPY . .
 
 # 3. Compila
-RUN npm run build
+RUN pnpm run build
 
 # Etapa de producción
 FROM node:22.13.1-alpine AS production-stage
@@ -27,4 +30,4 @@ COPY --from=build-stage /app/package.json ./package.json
 ENV NODE_ENV=production
 EXPOSE 3001
 
-CMD ["npm", "start"]
+CMD ["pnpm", "start"]
