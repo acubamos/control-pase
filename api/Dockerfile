@@ -24,4 +24,4 @@ COPY --from=build-stage /app/dist ./dist
 
 # Expone el puerto y ejecuta la aplicación
 EXPOSE 3001
-CMD ["node", "dist/src/main.js"]
+CMD ["node", "dist/main"]

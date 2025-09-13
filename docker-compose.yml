@@ -70,6 +70,8 @@ services:
     restart: always
     mem_limit: 512m      # Limita la RAM a 512 MB
     cpus: 0.5            # Limita el uso de CPU a medio núcleo
+    ports:
+      - "3001:3001"
     environment:
       - TZ=America/Havana
     volumes:
