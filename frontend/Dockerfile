@@ -5,11 +5,9 @@ WORKDIR /app
 # Instalar pnpm
 RUN npm install -g pnpm
 
-# 1. Copia solo los manifests para aprovechar la caché
-COPY package.json pnpm-lock.yaml ./
-
-# Instalar dependencias
-RUN pnpm install --prod --no-frozen-lockfile --legacy-peer-deps
+# 1. Copia package.json y genera nuevo lockfile
+COPY package.json ./
+RUN pnpm install
 
 # 2. Copia el resto del código
 COPY . .
@@ -22,10 +20,16 @@ FROM node:22.13.1-alpine AS production-stage
 
 WORKDIR /app
 
-# 4. Copia solo los archivos necesarios
+# Instalar pnpm
+RUN npm install -g pnpm
+
+# 4. Copia package.json y genera dependencias de producción
+COPY package.json ./
+RUN pnpm install --prod
+
+# 5. Copia los archivos necesarios
 COPY --from=build-stage /app/.next ./.next
-COPY --from=build-stage /app/node_modules ./node_modules
-COPY --from=build-stage /app/package.json ./package.json
+COPY --from=build-stage /app/public ./public
 
 ENV NODE_ENV=production
 EXPOSE 3001
