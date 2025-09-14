@@ -18,6 +18,17 @@ const nextConfig = {
       },
     ]
   },
+  
+  // AÑADE ESTA NUEVA SECCIÓN para desactivar verificación SSL solo en desarrollo
+  webpack: (config, { isServer, dev }) => {
+    // Desactivar verificación de certificados SSL solo en desarrollo
+    if (dev) {
+      console.log('⚠️  Modo desarrollo: Desactivando verificación SSL');
+      process.env.NODE_TLS_REJECT_UUTHORIZED = '0';
+    }
+    
+    return config;
+  },
 }
 
-export default nextConfig
+export default nextConfig;
