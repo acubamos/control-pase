@@ -29,9 +29,6 @@ services:
     restart: always
     mem_limit: 512m      # Limita la RAM a 512 MB
     cpus: 0.5            # Limita el uso de CPU a medio núcleo
-    #expose:
-    ports:
-      - "3002:3001"
     environment:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
@@ -70,10 +67,9 @@ services:
     restart: always
     mem_limit: 512m      # Limita la RAM a 512 MB
     cpus: 0.5            # Limita el uso de CPU a medio núcleo
-    ports:
-      - "3001:3001"
     environment:
       - TZ=America/Havana
+      - NEXT_PUBLIC_API_URL=https://apicp.acubamos.cu
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro

@@ -10,6 +10,6 @@ export const databaseConfig: TypeOrmModuleOptions = {
   password: process.env.DB_PASSWORD || "test",
   database: process.env.DB_NAME || "test",
   entities: [VehicleEntry, User],
-  synchronize: process.env.NODE_ENV !== "production",
+  synchronize: true,
   logging: process.env.NODE_ENV === "development",
 }

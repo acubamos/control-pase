@@ -7,14 +7,14 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    domains: ['localhost'],
+    domains: ['localhost', 'apicp.acubamos.cu', 'control.acubamos.cu'],
     unoptimized: true,
   },
   async rewrites() {
     return [
       {
         source: '/api/:path*',
-        destination: 'http://localhost:3001/api/:path*',
+        destination: 'https://apicp.acubamos.cu/api/:path*',
       },
     ]
   },

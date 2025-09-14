@@ -7,7 +7,12 @@ async function bootstrap() {
 
   // Configurar CORS
   app.enableCors({
-    origin: ["http://localhost:3000", "http://localhost:3001"],
+    origin: [
+      "http://localhost:3000", 
+      "http://localhost:3001",
+      "https://control.acubamos.cu",
+      "https://apicp.acubamos.cu"
+    ],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
