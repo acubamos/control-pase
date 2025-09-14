@@ -59,7 +59,7 @@ services:
       - "traefik.http.routers.apicp.entrypoints=websecure"
       - "traefik.http.routers.apicp.tls.certresolver=letsencrypt"
       - "traefik.http.services.apicp.loadbalancer.server.port=3001"
-      - traefik.docker.network=proxy
+      - "traefik.docker.network=proxy"
 
   frontend:
     build: ./frontend
@@ -83,7 +83,7 @@ services:
       - "traefik.http.routers.control.entrypoints=websecure"
       - "traefik.http.routers.control.tls.certresolver=letsencrypt"
       - "traefik.http.services.control.loadbalancer.server.port=3000"
-      - traefik.docker.network=proxy
+      - "traefik.docker.network=proxy"
 
 networks:
   control-network:
