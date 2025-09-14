@@ -70,6 +70,7 @@ services:
     environment:
       - TZ=America/Havana
       - NEXT_PUBLIC_API_URL=https://apicp.acubamos.cu
+      - PORT=3000
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
@@ -81,7 +82,7 @@ services:
       - "traefik.http.routers.control.rule=Host(`control.acubamos.cu`)"
       - "traefik.http.routers.control.entrypoints=websecure"
       - "traefik.http.routers.control.tls=true"
-      - "traefik.http.services.control.loadbalancer.server.port=3001"
+      - "traefik.http.services.control.loadbalancer.server.port=3000"
       - traefik.docker.network=proxy
 
 networks:

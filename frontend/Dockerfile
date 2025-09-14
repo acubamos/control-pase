@@ -32,6 +32,6 @@ COPY --from=build-stage /app/.next ./.next
 COPY --from=build-stage /app/public ./public
 
 ENV NODE_ENV=production
-EXPOSE 3001
+EXPOSE 3000
 
 CMD ["pnpm", "start"]
