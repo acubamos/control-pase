@@ -456,6 +456,7 @@ export default function VehicleEntrySystem() {
                             onCheckedChange={(checked) =>
                               handleVehicleTypeChange(type, checked as boolean)
                             }
+                            required
                           />
                           <Label htmlFor={type} className="text-sm">
                             {type}
@@ -511,6 +512,7 @@ export default function VehicleEntrySystem() {
                                   checked as boolean
                                 )
                               }
+                              required
                             />
                             <Label
                               htmlFor={`${location}-${sublocation}`}
@@ -556,7 +558,7 @@ export default function VehicleEntrySystem() {
                       {editingEntry && (
                         <>
                           <Label htmlFor="fechaSalida">
-                            Fecha de Salida (Opcional)
+                            Fecha de Salida
                           </Label>
                           <Input
                             id="fechaSalida"
