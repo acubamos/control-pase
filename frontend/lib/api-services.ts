@@ -1,6 +1,6 @@
 import { authService } from "./auth-service"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://apicp.acubamos.cu/api"
 
 export interface VehicleEntry {
   id: string
@@ -151,3 +151,4 @@ class ApiService {
 }
 
 export const apiService = new ApiService()
+
