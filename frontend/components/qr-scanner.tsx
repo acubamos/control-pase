@@ -4,8 +4,12 @@ import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Camera, X } from "lucide-react"
-import { parseQRData, type QRData } from "@/lib/qr-scanner"
-import jsQR from "jsqr"
+
+interface QRData {
+  nombre: string
+  apellido: string
+  cedula: string
+}
 
 interface QRScannerProps {
   onScan: (data: QRData) => void
@@ -16,165 +20,183 @@ interface QRScannerProps {
 export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   const [isScanning, setIsScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [scanStatus, setScanStatus] = useState("Escaneando...")
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
-  const scanCountRef = useRef(0)
+  const [scanStatus, setScanStatus] = useState("Iniciando cámara...")
+  const scannerRef = useRef<any>(null)
+  const scannerContainerRef = useRef<HTMLDivElement>(null)
+  const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const startCamera = async () => {
+  const parseQRContent = (decodedText: string): QRData | null => {
+    console.log("Datos QR crudos:", decodedText)
+    
+    // Limpiar y normalizar el texto
+    const cleanText = decodedText.trim().replace(/\s+/g, ' ')
+    
+    // Patrones de detección para diferentes formatos
+    const patterns = [
+      // Formato: N:Nombre A:Apellido CI:Cédula
+      /N:([^A]+)A:([^CI]+)CI:(\d+)/i,
+      // Formato: N:Nombre\nA:Apellido\nCI:Cédula
+      /N:([^\n]+)\s*A:([^\n]+)\s*CI:(\d+)/i,
+      // Formato: NOMBRE:Nombre APELLIDO:Apellido CEDULA:Cédula
+      /NOMBRE:([^\n]+)\s*APELLIDO:([^\n]+)\s*CEDULA:(\d+)/i,
+      // Formato: Nombre: Nombre Apellido: Apellido Cédula: Cédula
+      /Nombre:\s*([^\n]+)\s*Apellido:\s*([^\n]+)\s*Cédula:\s*(\d+)/i,
+      // Formato simple con saltos de línea
+      /([^\n]+)\n([^\n]+)\n(\d+)/,
+      // Formato sin etiquetas (nombre apellido cédula)
+      /^([A-ZÁÉÍÓÚÑ\s]+)[\s,]+([A-ZÁÉÍÓÚÑ\s]+)[\s,]+(\d+)$/i,
+      // Formato compacto sin espacios
+      /^([A-Z]+)([A-Z]+)(\d+)$/i
+    ]
+
+    for (const pattern of patterns) {
+      const match = cleanText.match(pattern)
+      if (match) {
+        const nombre = match[1].trim().replace(/\s+/g, ' ')
+        const apellido = match[2].trim().replace(/\s+/g, ' ')
+        const cedula = match[3].trim()
+
+        console.log("QR parseado exitosamente:", { nombre, apellido, cedula })
+        return { nombre, apellido, cedula }
+      }
+    }
+
+    console.warn("Formato QR no reconocido:", cleanText)
+    return null
+  }
+
+  const startScanner = async () => {
+    if (!scannerContainerRef.current) return
+
     try {
       setError(null)
       setIsScanning(true)
-      setScanStatus("Escaneando...")
-      scanCountRef.current = 0
+      setScanStatus("Iniciando cámara...")
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "environment",
-          width: { ideal: 1920, min: 1280 },
-          height: { ideal: 1080, min: 720 },
-          frameRate: { ideal: 30, min: 24 },
+      // Importación dinámica para evitar problemas de SSR
+      const { Html5QrcodeScanner } = await import('html5-qrcode')
+      
+      // Configuración optimizada para documentos
+      scannerRef.current = new Html5QrcodeScanner(
+        "qr-scanner-container",
+        {
+          fps: 15,
+          qrbox: { width: 280, height: 280 },
+          aspectRatio: 1.0,
+          rememberLastUsedCamera: true,
+          showTorchButtonIfSupported: true,
+          showZoomSliderIfSupported: true,
+          defaultZoomValueIfSupported: 2,
+          supportedScanTypes: [
+            { type: "qr", config: {} }
+          ]
         },
-      })
+        false
+      )
 
-      streamRef.current = stream
+      scannerRef.current.render(
+        (decodedText: string) => {
+          console.log("✅ QR detectado:", decodedText)
+          setScanStatus("Procesando QR...")
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play().catch(console.error)
+          // Procesar el QR detectado
+          const qrData = parseQRContent(decodedText)
+          
+          if (qrData) {
+            setScanStatus("¡QR válido!")
+            
+            // Pequeño delay para feedback visual
+            setTimeout(() => {
+              onScan(qrData)
+              stopScanner()
+              onClose()
+            }, 500)
+          } else {
+            setScanStatus("Formato no válido")
+            console.warn("❌ Formato no reconocido")
+            
+            // Reanudar escaneo después de 2 segundos
+            if (scanTimeoutRef.current) {
+              clearTimeout(scanTimeoutRef.current)
+            }
+            scanTimeoutRef.current = setTimeout(() => {
+              setScanStatus("Escaneando...")
+            }, 2000)
+          }
+        },
+        (errorMessage: string) => {
+          // Solo mostrar errores relevantes
+          if (!errorMessage.includes("No MultiFormat Readers") && 
+              !errorMessage.includes("NotFoundException")) {
+            console.log("🔍 Escaneando...")
+          }
         }
-      }
+      )
 
-      // Iniciar escaneo cada 150ms
-      intervalRef.current = setInterval(scanFrame, 150)
+      setScanStatus("Escaneando...")
+      console.log("🚀 Escáner iniciado correctamente")
+
     } catch (err) {
-      setError("No se pudo acceder a la cámara. Asegúrate de dar los permisos necesarios.")
+      console.error("❌ Error al iniciar escáner:", err)
+      setError("No se pudo acceder a la cámara. Verifica los permisos.")
       setIsScanning(false)
+      setScanStatus("Error")
     }
   }
 
-  const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => {
-        track.stop()
-        track.enabled = false
-      })
-      streamRef.current = null
+  const stopScanner = () => {
+    // Limpiar timeout
+    if (scanTimeoutRef.current) {
+      clearTimeout(scanTimeoutRef.current)
+      scanTimeoutRef.current = null
     }
 
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = null
+    // Detener el escáner
+    if (scannerRef.current) {
+      try {
+        scannerRef.current.clear().catch((error: any) => {
+          console.log("Escáner limpiado")
+        })
+      } catch (error) {
+        console.log("Escáner ya detenido")
+      }
+      scannerRef.current = null
     }
-
+    
     setIsScanning(false)
   }
 
-  const scanFrame = () => {
-    if (!videoRef.current || !canvasRef.current) return
-
-    const video = videoRef.current
-    const canvas = canvasRef.current
-    const context = canvas.getContext("2d", { willReadFrequently: true })
-
-    if (!context || video.readyState !== video.HAVE_ENOUGH_DATA) return
-
-    // Optimizar el tamaño para mejor detección
-    const scale = 0.7 // Reducir tamaño para mejor performance
-    canvas.width = video.videoWidth * scale
-    canvas.height = video.videoHeight * scale
-    
-    context.drawImage(video, 0, 0, canvas.width, canvas.height)
-    
-    const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-    
-    // Intentar múltiples métodos de detección
-    const detectionMethods = [
-      () => jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: "dontInvert",
-        minConfidence: 0.3
-      }),
-      () => jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: "invertFirst",
-        minConfidence: 0.3
-      }),
-      () => jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: "attemptBoth",
-        minConfidence: 0.25
-      })
-    ]
-
-    let detectedCode = null
-    for (const detect of detectionMethods) {
-      detectedCode = detect()
-      if (detectedCode) break
-    }
-
-    scanCountRef.current++
-
-    if (detectedCode) {
-      console.log("QR detectado - Confianza:", detectedCode.confidence)
-      console.log("Datos:", detectedCode.data)
-      
-      try {
-        const qrData = parseQRData(detectedCode.data)
-        if (qrData) {
-          setScanStatus("¡QR detectado!")
-          setTimeout(() => {
-            onScan(qrData)
-            handleClose()
-          }, 500)
-        }
-      } catch (parseError) {
-        console.error("Error parsing QR:", parseError)
-        setScanStatus("Error en formato QR")
-      }
-    }
-
-    // Debug: mostrar estado cada 20 escaneos
-    if (scanCountRef.current % 20 === 0) {
-      console.log(`Escaneos realizados: ${scanCountRef.current}`)
-    }
-  }
-
   const handleClose = () => {
-    stopCamera()
+    stopScanner()
     onClose()
   }
 
-  const simulateScan = () => {
-    const mockQRText = "N:HASSAN ALEJANDROA:RODRIGUEZ PEREZCI:99032608049"
-    try {
-      const qrData = parseQRData(mockQRText)
-      if (qrData) {
-        onScan(qrData)
-        handleClose()
-      }
-    } catch (error) {
-      console.error("Error en simulación:", error)
-    }
+  const handleRetry = () => {
+    stopScanner()
+    setTimeout(() => {
+      startScanner()
+    }, 300)
   }
 
   useEffect(() => {
     if (isOpen) {
-      startCamera()
+      // Pequeño delay para asegurar que el DOM esté listo
+      const timer = setTimeout(startScanner, 150)
+      return () => clearTimeout(timer)
     } else {
-      stopCamera()
+      stopScanner()
     }
 
     return () => {
-      stopCamera()
+      stopScanner()
     }
   }, [isOpen])
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 text-lg">
             <Camera className="h-5 w-5" />
             Escanear Código QR
           </DialogTitle>
@@ -182,51 +204,63 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
 
         <div className="space-y-4">
           {error ? (
-            <div className="text-center py-8">
-              <p className="text-red-600 mb-4">{error}</p>
-              <Button onClick={startCamera} variant="outline">
-                Intentar de nuevo
-              </Button>
+            <div className="text-center py-6">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Camera className="h-8 w-8 text-red-600" />
+              </div>
+              <p className="text-red-600 font-medium mb-3">{error}</p>
+              <div className="space-y-2">
+                <Button onClick={handleRetry} className="w-full">
+                  Reintentar
+                </Button>
+                <Button onClick={handleClose} variant="outline" className="w-full">
+                  Cancelar
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="relative">
-              <video 
-                ref={videoRef} 
-                className="w-full h-64 bg-black rounded-lg object-cover" 
-                playsInline 
-                muted 
+              <div
+                id="qr-scanner-container"
+                ref={scannerContainerRef}
+                className="w-full h-72 bg-black rounded-lg overflow-hidden"
               />
-              <canvas ref={canvasRef} className="hidden" />
-
-              {isScanning && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <div className="border-2 border-green-500 border-dashed w-48 h-48 rounded-lg animate-pulse" />
-                  <div className="mt-4 text-center">
-                    <p className="text-green-500 text-sm font-medium">{scanStatus}</p>
-                    <p className="text-xs text-gray-300 mt-1">
-                      Intentos: {scanCountRef.current}
-                    </p>
-                  </div>
+              
+              {/* Overlay de guía */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <div className="border-3 border-green-400 border-dashed w-56 h-56 rounded-lg animate-pulse" />
+                
+                {/* Esquinas decorativas */}
+                <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2 border-green-400" />
+                <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2 border-green-400" />
+                <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2 border-green-400" />
+                <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-green-400" />
+                
+                {/* Estado del escaneo */}
+                <div className="absolute bottom-4 left-0 right-0 text-center">
+                  <p className="text-green-400 text-sm font-medium bg-black/80 px-3 py-1 rounded-full inline-block">
+                    {scanStatus}
+                  </p>
                 </div>
-              )}
+              </div>
             </div>
           )}
 
-          <div className="flex gap-2">
-            <Button onClick={simulateScan} className="flex-1" variant="outline">
-              Simular Escaneo (Desarrollo)
-            </Button>
-            <Button onClick={handleClose} variant="outline" size="icon">
-              <X className="h-4 w-4" />
+          {/* Botón de cerrar */}
+          <div className="flex justify-center pt-2">
+            <Button onClick={handleClose} variant="outline" className="px-8">
+              <X className="h-4 w-4 mr-2" />
+              Cerrar
             </Button>
           </div>
 
-          <div className="text-center space-y-2">
-            <p className="text-sm text-gray-600">
-              Apunta la cámara hacia el código QR de la cédula
+          {/* Instrucciones */}
+          <div className="text-center space-y-1">
+            <p className="text-sm text-gray-600 font-medium">
+              Enfoca el código QR dentro del marco
             </p>
             <p className="text-xs text-gray-400">
-              Asegura buena iluminación y mantén estable el dispositivo
+              Asegura buena iluminación y mantén el dispositivo estable
             </p>
           </div>
         </div>
