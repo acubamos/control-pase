@@ -16,10 +16,12 @@ RUN npm run build
 FROM node:22.13.1-alpine AS production-stage
 WORKDIR /app
 
+# Instala curl para healthchecks
+RUN apk add --no-cache curl
+
 # Copia los archivos necesarios desde la etapa de construcción
 COPY package*.json ./
-#RUN npm ci --omit=dev
-RUN npm install
+RUN npm ci --omit=dev
 COPY --from=build-stage /app/dist ./dist
 
 # Expone el puerto y ejecuta la aplicación
