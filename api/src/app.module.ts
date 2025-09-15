@@ -8,20 +8,24 @@ import { AuthModule } from "./auth/auth.module"
 import { DatabaseModule } from "./database/database.module"
 import { databaseConfig } from "./config/database.config"
 import { DatabaseCleanupService } from "./database/database-cleanup.service"
+import { AppController } from "./app.controller"
+import { AppService } from "./app.service"
 
 @Module({
-  imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-    }),
-    TypeOrmModule.forRoot(databaseConfig),
-    ServeStaticModule.forRoot({
-      rootPath: join(__dirname, "..", "uploads"),
-      serveRoot: "/uploads",
-    }),
-    EntriesModule,   
-    AuthModule,       
-    DatabaseModule, 
-  ],
+ imports: [
+   ConfigModule.forRoot({
+     isGlobal: true,
+   }),
+   TypeOrmModule.forRoot(databaseConfig),
+   ServeStaticModule.forRoot({
+     rootPath: join(__dirname, "..", "uploads"),
+     serveRoot: "/uploads",
+   }),
+   EntriesModule,   
+   AuthModule,       
+   DatabaseModule, 
+ ],
+ controllers: [AppController],
+ providers: [AppService],
 })
 export class AppModule {}
