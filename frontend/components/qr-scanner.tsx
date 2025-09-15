@@ -4,20 +4,24 @@ import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Camera, X } from "lucide-react"
-import { parseQRData, type QRData } from "@/lib/qr-scanner"
-import { Html5QrcodeScanner } from "html5-qrcode"
+
+interface QRData {
+  nombre: string
+  apellido: string
+  cedula: string
+}
 
 interface QRScannerProps {
   onScan: (data: QRData) => void
   isOpen: boolean
-  onClose: () void
+  onClose: () => void
 }
 
 export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   const [isScanning, setIsScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [scanStatus, setScanStatus] = useState("Escaneando...")
-  const scannerRef = useRef<Html5QrcodeScanner | null>(null)
+  const scannerRef = useRef<any>(null)
   const scannerContainerRef = useRef<HTMLDivElement>(null)
 
   const parseQRContent = (decodedText: string): QRData | null => {
@@ -34,7 +38,9 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       // Formato simple con saltos de línea
       /([^\n]+)\n([^\n]+)\n(\d+)/,
       // Formato sin etiquetas
-      /^([A-ZÁÉÍÓÚÑ\s]+)[\s,]+([A-ZÁÉÍÓÚÑ\s]+)[\s,]+(\d+)$/i
+      /^([A-ZÁÉÍÓÚÑ\s]+)[\s,]+([A-ZÁÉÍÓÚÑ\s]+)[\s,]+(\d+)$/i,
+      // Formato compacto
+      /N:([^A]+)A:([^CI]+)CI:(\d+)/i
     ]
 
     for (const pattern of patterns) {
@@ -44,6 +50,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         const apellido = match[2].trim()
         const cedula = match[3].trim()
 
+        console.log("Parseado con patrón:", { nombre, apellido, cedula })
         return {
           nombre,
           apellido,
@@ -52,36 +59,34 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       }
     }
 
-    // Si no coincide con patrones, intentar parsing manual
-    try {
-      return parseQRData(decodedText)
-    } catch {
-      return null
-    }
+    console.warn("No se pudo parsear el QR con ningún patrón")
+    return null
   }
 
   const startScanner = async () => {
-    if (!scannerContainerRef.current) return
+    if (!scannerContainerRef.current || !isOpen) return
 
     try {
       setError(null)
       setIsScanning(true)
       setScanStatus("Iniciando cámara...")
 
+      // Dynamically import the library to avoid SSR issues
+      const { Html5QrcodeScanner } = await import('html5-qrcode')
+      
       // Configurar el scanner
       scannerRef.current = new Html5QrcodeScanner(
         "qr-scanner-container",
         {
           fps: 10,
           qrbox: { width: 250, height: 250 },
-          supportedScanTypes: [], // Escanear ambos QR y barcodes
           rememberLastUsedCamera: true,
         },
         false
       )
 
       scannerRef.current.render(
-        (decodedText) => {
+        (decodedText: string) => {
           console.log("QR detectado:", decodedText)
           setScanStatus("¡QR detectado! Procesando...")
 
@@ -94,9 +99,14 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
           } else {
             setScanStatus("Formato no reconocido. Intenta nuevamente.")
             console.warn("Formato QR no reconocido:", decodedText)
+            
+            // Continuar escaneando después de un breve delay
+            setTimeout(() => {
+              setScanStatus("Escaneando...")
+            }, 2000)
           }
         },
-        (errorMessage) => {
+        (errorMessage: string) => {
           // Ignorar errores de parsing normales
           if (!errorMessage.includes("No MultiFormat Readers")) {
             console.log("Escaneo en progreso...")
@@ -115,7 +125,13 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
 
   const stopScanner = () => {
     if (scannerRef.current) {
-      scannerRef.current.clear().catch(console.error)
+      try {
+        scannerRef.current.clear().catch((error: any) => {
+          console.error("Error clearing scanner:", error)
+        })
+      } catch (error) {
+        console.error("Error stopping scanner:", error)
+      }
       scannerRef.current = null
     }
     setIsScanning(false)
@@ -131,7 +147,8 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       "N:REBECA\nA:LEAL FERNANDEZ\nCI:01040464099",
       "N:REBECA A:LEAL FERNANDEZ CI:01040464099",
       "REBECA\nLEAL FERNANDEZ\n01040464099",
-      "NOMBRE:REBECA APELLIDO:LEAL FERNANDEZ CEDULA:01040464099"
+      "NOMBRE:REBECA APELLIDO:LEAL FERNANDEZ CEDULA:01040464099",
+      "N:REBECAA:LEAL FERNANDEZCI:01040464099"
     ]
 
     const randomQR = testQRs[Math.floor(Math.random() * testQRs.length)]
@@ -147,12 +164,9 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   useEffect(() => {
     if (isOpen) {
       // Pequeño delay para asegurar que el DOM esté listo
-      setTimeout(startScanner, 100)
+      const timer = setTimeout(startScanner, 100)
+      return () => clearTimeout(timer)
     } else {
-      stopScanner()
-    }
-
-    return () => {
       stopScanner()
     }
   }, [isOpen])
