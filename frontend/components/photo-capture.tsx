@@ -2,10 +2,10 @@
 
 import type React from "react"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Camera, Upload, X, Check } from "lucide-react"
+import { Camera, Upload, X, Check, RotateCcw } from "lucide-react"
 import { apiService } from "@/lib/api-services"
 import { toast } from "@/hooks/use-toast"
 
@@ -20,40 +20,90 @@ export function PhotoCapture({ entryId, onPhotoUploaded, isOpen, onClose }: Phot
   const [isUploading, setIsUploading] = useState(false)
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null)
   const [stream, setStream] = useState<MediaStream | null>(null)
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("environment")
+  const [isCameraSupported, setIsCameraSupported] = useState(true)
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Verificar soporte de cámara al montar el componente
+  useEffect(() => {
+    const checkCameraSupport = async () => {
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          setIsCameraSupported(false)
+          return
+        }
+        
+        const devices = await navigator.mediaDevices.enumerateDevices()
+        const hasCamera = devices.some(device => device.kind === 'videoinput')
+        setIsCameraSupported(hasCamera)
+      } catch (error) {
+        console.error("Error checking camera support:", error)
+        setIsCameraSupported(false)
+      }
+    }
+    
+    checkCameraSupport()
+  }, [])
+
   const startCamera = async () => {
     try {
+      // Detener stream existente si hay uno
+      if (stream) {
+        stopCamera()
+      }
+
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: "user",
-          width: { ideal: 640 },
-          height: { ideal: 480 },
+          facingMode: facingMode,
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
         },
+        audio: false
       })
 
       setStream(mediaStream)
 
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream
-        videoRef.current.play()
+        // Esperar a que el video cargue antes de reproducir
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play().catch(error => {
+            console.error("Error playing video:", error)
+          })
+        }
       }
     } catch (error) {
+      console.error("Camera error:", error)
       toast({
         title: "Error",
-        description: "No se pudo acceder a la cámara",
+        description: "No se pudo acceder a la cámara. Verifica los permisos o intenta con la cámara frontal.",
         variant: "destructive",
       })
+      
+      // Intentar con la cámara frontal si la trasera falla
+      if (facingMode === "environment") {
+        setFacingMode("user")
+        setTimeout(() => startCamera(), 500)
+      }
     }
   }
 
   const stopCamera = () => {
     if (stream) {
-      stream.getTracks().forEach((track) => track.stop())
+      stream.getTracks().forEach((track) => {
+        track.stop()
+      })
       setStream(null)
     }
+  }
+
+  const switchCamera = () => {
+    const newFacingMode = facingMode === "user" ? "environment" : "user"
+    setFacingMode(newFacingMode)
+    stopCamera()
+    setTimeout(() => startCamera(), 300)
   }
 
   const capturePhoto = () => {
@@ -63,18 +113,49 @@ export function PhotoCapture({ entryId, onPhotoUploaded, isOpen, onClose }: Phot
     const canvas = canvasRef.current
     const context = canvas.getContext("2d")
 
-    if (!context) return
+    if (!context || !video.videoWidth || !video.videoHeight) return
 
+    // Ajustar el canvas al tamaño del video
     canvas.width = video.videoWidth
     canvas.height = video.videoHeight
+
+    // Dibujar la imagen en el canvas
     context.drawImage(video, 0, 0, canvas.width, canvas.height)
 
-    const photoDataUrl = canvas.toDataURL("image/jpeg", 0.8)
+    // Obtener la imagen como data URL
+    const photoDataUrl = canvas.toDataURL("image/jpeg", 0.9)
     setCapturedPhoto(photoDataUrl)
     stopCamera()
   }
 
+  const validateFile = (file: File): boolean => {
+    // Verificar que sea una imagen
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Error",
+        description: "Por favor selecciona un archivo de imagen válido",
+        variant: "destructive",
+      })
+      return false
+    }
+
+    // Verificar tamaño (máximo 10MB)
+    const maxSize = 10 * 1024 * 1024 // 10MB
+    if (file.size > maxSize) {
+      toast({
+        title: "Error",
+        description: "La imagen es demasiado grande. Máximo permitido: 10MB",
+        variant: "destructive",
+      })
+      return false
+    }
+
+    return true
+  }
+
   const uploadPhoto = async (file: File) => {
+    if (!validateFile(file)) return
+    
     setIsUploading(true)
     try {
       const updatedEntry = await apiService.uploadPhoto(entryId, file)
@@ -100,6 +181,10 @@ export function PhotoCapture({ entryId, onPhotoUploaded, isOpen, onClose }: Phot
     if (file) {
       uploadPhoto(file)
     }
+    // Limpiar el input para permitir seleccionar el mismo archivo otra vez
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
   }
 
   const handleCapturedPhotoUpload = () => {
@@ -109,8 +194,19 @@ export function PhotoCapture({ entryId, onPhotoUploaded, isOpen, onClose }: Phot
     fetch(capturedPhoto)
       .then((res) => res.blob())
       .then((blob) => {
-        const file = new File([blob], `photo-${entryId}.jpg`, { type: "image/jpeg" })
+        const file = new File([blob], `photo-${entryId}-${Date.now()}.jpg`, { 
+          type: "image/jpeg",
+          lastModified: Date.now()
+        })
         uploadPhoto(file)
+      })
+      .catch(error => {
+        console.error("Error converting photo:", error)
+        toast({
+          title: "Error",
+          description: "No se pudo procesar la foto",
+          variant: "destructive",
+        })
       })
   }
 
@@ -125,27 +221,47 @@ export function PhotoCapture({ entryId, onPhotoUploaded, isOpen, onClose }: Phot
     startCamera()
   }
 
+  // Efecto para iniciar/detener la cámara cuando se abre/cierra el diálogo
+  useEffect(() => {
+    if (isOpen && isCameraSupported) {
+      // Pequeño retraso para asegurar que el diálogo esté completamente abierto
+      setTimeout(() => startCamera(), 100)
+    } else {
+      stopCamera()
+    }
+
+    return () => {
+      stopCamera()
+    }
+  }, [isOpen, isCameraSupported])
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+      <DialogContent className="max-w-md p-0 overflow-hidden">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b">
+          <DialogTitle className="flex items-center gap-2 text-xl">
             <Camera className="h-5 w-5" />
-            Capturar Foto
+            {capturedPhoto ? "Vista Previa" : "Agregar Foto"}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 px-6 pb-6">
           {capturedPhoto ? (
             // Vista previa de la foto capturada
             <div className="space-y-4">
-              <img
-                src={capturedPhoto || "/placeholder.svg"}
-                alt="Foto capturada"
-                className="w-full h-64 object-cover rounded-lg"
-              />
+              <div className="relative rounded-lg overflow-hidden">
+                <img
+                  src={capturedPhoto || "/placeholder.svg"}
+                  alt="Foto capturada"
+                  className="w-full h-64 object-contain bg-black"
+                />
+              </div>
               <div className="flex gap-2">
-                <Button onClick={handleCapturedPhotoUpload} disabled={isUploading} className="flex-1">
+                <Button 
+                  onClick={handleCapturedPhotoUpload} 
+                  disabled={isUploading} 
+                  className="flex-1"
+                >
                   {isUploading ? (
                     "Subiendo..."
                   ) : (
@@ -156,21 +272,50 @@ export function PhotoCapture({ entryId, onPhotoUploaded, isOpen, onClose }: Phot
                   )}
                 </Button>
                 <Button onClick={retakePhoto} variant="outline">
+                  <Camera className="h-4 w-4 mr-2" />
                   Repetir
                 </Button>
               </div>
             </div>
           ) : stream ? (
-            // Vista de la cámara
+            // Vista de la cámara activa
             <div className="space-y-4">
-              <div className="relative">
-                <video ref={videoRef} className="w-full h-64 bg-black rounded-lg object-cover" playsInline muted />
-                <canvas ref={canvasRef} className="hidden" />
+              <div className="relative bg-black rounded-lg overflow-hidden">
+                <video 
+                  ref={videoRef} 
+                  className="w-full h-64 object-cover" 
+                  playsInline 
+                  muted 
+                />
+                <div className="absolute bottom-2 left-0 right-0 flex justify-center">
+                  <Button 
+                    onClick={capturePhoto}
+                    size="lg"
+                    className="rounded-full h-14 w-14 bg-white hover:bg-gray-200 text-black"
+                  >
+                    <Camera className="h-6 w-6" />
+                  </Button>
+                </div>
+                <Button
+                  onClick={switchCamera}
+                  variant="secondary"
+                  size="icon"
+                  className="absolute top-2 right-2 rounded-full h-10 w-10 bg-white/20 backdrop-blur-sm"
+                >
+                  <RotateCcw className="h-5 w-5 text-white" />
+                </Button>
               </div>
+              <canvas ref={canvasRef} className="hidden" />
+              
               <div className="flex gap-2">
-                <Button onClick={capturePhoto} className="flex-1">
-                  <Camera className="h-4 w-4 mr-2" />
-                  Capturar
+                <Button 
+                  onClick={() => fileInputRef.current?.click()} 
+                  variant="outline" 
+                  className="flex-1"
+                  disabled={isUploading}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  {isUploading ? "Subiendo..." : "Subir archivo"}
                 </Button>
                 <Button onClick={stopCamera} variant="outline">
                   Cancelar
@@ -178,13 +323,25 @@ export function PhotoCapture({ entryId, onPhotoUploaded, isOpen, onClose }: Phot
               </div>
             </div>
           ) : (
-            // Opciones iniciales
+            // Opciones iniciales (sin cámara activa)
             <div className="space-y-4">
+              {!isCameraSupported && (
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-md text-sm">
+                  La cámara no está disponible en este dispositivo. Puedes subir una imagen desde tus archivos.
+                </div>
+              )}
+              
               <div className="grid grid-cols-2 gap-4">
-                <Button onClick={startCamera} className="h-24 flex-col gap-2">
-                  <Camera className="h-8 w-8" />
-                  Tomar Foto
-                </Button>
+                {isCameraSupported && (
+                  <Button 
+                    onClick={startCamera} 
+                    className="h-24 flex-col gap-2"
+                    disabled={isUploading}
+                  >
+                    <Camera className="h-8 w-8" />
+                    Tomar Foto
+                  </Button>
+                )}
                 <Button
                   onClick={() => fileInputRef.current?.click()}
                   variant="outline"
@@ -196,11 +353,26 @@ export function PhotoCapture({ entryId, onPhotoUploaded, isOpen, onClose }: Phot
                 </Button>
               </div>
 
-              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
+              <p className="text-xs text-center text-muted-foreground">
+                Formatos soportados: JPG, PNG, WEBP, GIF. Máximo 10MB.
+              </p>
             </div>
           )}
 
-          <Button onClick={handleClose} variant="outline" className="w-full bg-transparent">
+          <input 
+            ref={fileInputRef} 
+            type="file" 
+            accept="image/*" 
+            onChange={handleFileUpload} 
+            className="hidden" 
+          />
+
+          <Button 
+            onClick={handleClose} 
+            variant="outline" 
+            className="w-full bg-transparent"
+            disabled={isUploading}
+          >
             <X className="h-4 w-4 mr-2" />
             Cerrar
           </Button>
