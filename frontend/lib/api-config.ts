@@ -1,6 +1,5 @@
 export const API_CONFIG = {
-  //BASE_URL: process.env.NEXT_PUBLIC_API_URL || "https://apicp.acubamos.cu/api",
-  BASE_URL: "https://apicp.acubamos.cu/api",
+  BASE_URL: process.env.NEXT_PUBLIC_API_URL || "https://apicp.acubamos.cu/api",
   TIMEOUT: 10000,
   ENDPOINTS: {
     ENTRIES: "/entries",
@@ -20,4 +19,5 @@ export const getAuthHeaders = () => {
         "Content-Type": "application/json",
       }
 }
+
 
