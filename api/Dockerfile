@@ -21,7 +21,7 @@ RUN apk add --no-cache curl
 
 # Copia los archivos necesarios desde la etapa de construcción
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 COPY --from=build-stage /app/dist ./dist
 
 # Expone el puerto y ejecuta la aplicación
