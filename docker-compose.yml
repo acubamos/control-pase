@@ -39,7 +39,7 @@ services:
       NODE_ENV: production
       TZ: America/Havana
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001"]
+      test: ["CMD", "wget", "-q", "-O", "-",  "http://localhost:3001/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -55,10 +55,10 @@ services:
       - proxy
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.apicp.rule=Host(`apicp.acubamos.cu`)"
-      - "traefik.http.routers.apicp.entrypoints=websecure"
-      - "traefik.http.routers.apicp.tls.certresolver=letsencrypt"
-      - "traefik.http.services.apicp.loadbalancer.server.port=3001"
+      - "traefik.http.routers.apicp-router.rule=Host(`apicp.acubamos.cu`)"  # Cambia el nombre del router
+      - "traefik.http.routers.apicp-router.entrypoints=websecure"
+      - "traefik.http.routers.apicp-router.tls.certresolver=letsencrypt"
+      - "traefik.http.services.apicp-service.loadbalancer.server.port=3001"  # Cambia el nombre del servicio
       - "traefik.docker.network=proxy"
 
   frontend:
