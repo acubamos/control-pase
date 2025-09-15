@@ -211,8 +211,33 @@ export default function VehicleEntrySystem() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-
+  
     try {
+      // ✅ Validar que haya al menos un tipo de vehículo
+      if (formData.tipoVehiculo.length === 0) {
+        toast({
+          title: "Validación",
+          description: "Debe seleccionar al menos un tipo de vehículo.",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+  
+      // ✅ Validar que haya al menos un lugar de destino
+      const tieneDestino = Object.values(formData.lugarDestino).some(
+        (sub) => sub.length > 0
+      );
+      if (!tieneDestino) {
+        toast({
+          title: "Validación",
+          description: "Debe seleccionar al menos un lugar de destino.",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+  
       if (editingEntry) {
         await apiService.updateEntry(editingEntry.id, formData);
         toast({
@@ -223,7 +248,7 @@ export default function VehicleEntrySystem() {
         // Enviar fecha de salida vacía para nuevas entradas
         const entryData = {
           ...formData,
-          fechaSalida: formData.fechaSalida || "", // Asegurar que sea string vacío si es null/undefined
+          fechaSalida: formData.fechaSalida || "", // Asegurar string vacío si es null/undefined
         };
         await apiService.createEntry(entryData);
         toast({
@@ -231,7 +256,7 @@ export default function VehicleEntrySystem() {
           description: "Entrada registrada correctamente",
         });
       }
-
+  
       resetForm();
       loadEntries(); // Refrescar la lista después de guardar
     } catch (error) {
@@ -247,6 +272,7 @@ export default function VehicleEntrySystem() {
       setIsSubmitting(false);
     }
   };
+  
 
   const handleEdit = (entry: VehicleEntry) => {
     setFormData({
@@ -455,8 +481,7 @@ export default function VehicleEntrySystem() {
                             checked={formData.tipoVehiculo.includes(type)}
                             onCheckedChange={(checked) =>
                               handleVehicleTypeChange(type, checked as boolean)
-                            }
-                            required
+                            }                            
                           />
                           <Label htmlFor={type} className="text-sm">
                             {type}
@@ -511,8 +536,7 @@ export default function VehicleEntrySystem() {
                                   sublocation,
                                   checked as boolean
                                 )
-                              }
-                              required
+                              }                             
                             />
                             <Label
                               htmlFor={`${location}-${sublocation}`}
