@@ -143,7 +143,7 @@ class ApiService {
   }
 
   async getPhoto(photoUrL: string): Promise<Blob> {
-    const response = await fetch(`https://apicp.acubamos.cu/api${photoUrL}`, {
+    const response = await fetch(`https://apicp.acubamos.cu/api/uploads/${photoUrL}`, {
       method: "GET",
       credentials: "include",
     })
