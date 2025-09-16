@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,6 +69,7 @@ export default function VehicleEntrySystem() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [cameraAccessAttempted, setCameraAccessAttempted] = useState(false);
 
   // Estados del formulario
   const [formData, setFormData] = useState<CreateVehicleEntry>({
@@ -343,6 +344,54 @@ export default function VehicleEntrySystem() {
     });
   };
 
+  const handleViewPhoto = async (entryId: string) => {
+    try {
+      const blob = await apiService.getPhoto(entryId);
+      const url = URL.createObjectURL(blob);
+      setPhotoBlobUrl(url);
+      setSelectedPhoto(url); // abre el modal
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo cargar la foto",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownloadPhoto = () => {
+    if (!photoBlobUrl) return;
+    const a = document.createElement("a");
+    a.href = photoBlobUrl;
+    a.download = "foto.jpg";
+    a.click();
+  };
+
+  // Manejar el cambio de visibilidad del modal de QR Scanner
+  const handleQRScannerOpenChange = useCallback((open: boolean) => {
+    setShowQRScanner(open);
+    if (!open) {
+      // Cuando se cierra el modal, resetear el estado de intento de cámara
+      setCameraAccessAttempted(false);
+    }
+  }, []);
+
+  // Manejar el error de la cámara en el QR Scanner
+  const handleQRScannerError = useCallback(
+    (error: Error) => {
+      if (!cameraAccessAttempted) {
+        toast({
+          title: "Error de cámara",
+          description:
+            "No se pudo acceder a la cámara. Por favor, verifica los permisos.",
+          variant: "destructive",
+        });
+        setCameraAccessAttempted(true);
+      }
+    },
+    [cameraAccessAttempted]
+  );
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -366,28 +415,6 @@ export default function VehicleEntrySystem() {
       />
     );
   }
-  const handleViewPhoto = async (entryId: string) => {
-    try {
-      const blob = await apiService.getPhoto(entryId);
-      const url = URL.createObjectURL(blob);
-      setPhotoBlobUrl(url);
-      setSelectedPhoto(url); // abre el modal
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "No se pudo cargar la foto",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDownloadPhoto = () => {
-    if (!photoBlobUrl) return;
-    const a = document.createElement("a");
-    a.href = photoBlobUrl;
-    a.download = "foto.jpg";
-    a.click();
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -757,50 +784,13 @@ export default function VehicleEntrySystem() {
                           src={entry.photoUrl || "/placeholder.svg"}
                           alt="Foto de la entrada"
                           className="w-16 h-16 object-cover rounded border cursor-pointer"
-                          onClick={() => handleViewPhoto(entry.photoUrl)}
+                          onClick={() => handleViewPhoto(entry.id)}
                           onError={(e) => {
                             (e.target as HTMLImageElement).src =
                               "/placeholder.svg";
                           }}
                         />
                       </div>
-
-                      {/* Modal de ver foto en grande */}
-                      <Dialog
-                        open={!!selectedPhoto}
-                        onOpenChange={() => setSelectedPhoto(null)}
-                      >
-                        <DialogContent className="max-w-2xl">
-                          <DialogHeader>
-                            <DialogTitle>Vista de Foto</DialogTitle>
-                          </DialogHeader>
-                          <div className="flex justify-center">
-                            <img
-                              src={selectedPhoto || "/placeholder.svg"}
-                              alt="Vista ampliada"
-                              className="max-h-[70vh] object-contain rounded-lg"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src =
-                                  "/placeholder.svg";
-                              }}
-                            />
-                          </div>
-                          <DialogFooter className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              onClick={handleDownloadPhoto}
-                            >
-                              Descargar
-                            </Button>
-                            <Button
-                              variant="outline"
-                              onClick={() => setSelectedPhoto(null)}
-                            >
-                              Cerrar
-                            </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
                     </div>
                   ))
                 )}
@@ -839,11 +829,48 @@ export default function VehicleEntrySystem() {
         </DialogContent>
       </Dialog>
 
+      {/* Modal de ver foto en grande */}
+      <Dialog
+        open={!!selectedPhoto}
+        onOpenChange={(open) => {
+          if (!open) setSelectedPhoto(null);
+        }}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Vista de Foto</DialogTitle>
+          </DialogHeader>
+          <div className="flex justify-center">
+            <img
+              src={selectedPhoto || "/placeholder.svg"}
+              alt="Vista ampliada"
+              className="max-h-[70vh] object-contain rounded-lg"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = "/placeholder.svg";
+              }}
+            />
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleDownloadPhoto}
+              disabled={!photoBlobUrl}
+            >
+              Descargar
+            </Button>
+            <Button variant="outline" onClick={() => setSelectedPhoto(null)}>
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Modales */}
       <QRScanner
         isOpen={showQRScanner}
         onClose={() => setShowQRScanner(false)}
         onScan={handleQRScan}
+        onError={handleQRScannerError}
       />
 
       {selectedEntryForPhoto && (
