@@ -68,6 +68,7 @@ export default function VehicleEntrySystem() {
   const [currentView, setCurrentView] = useState<"main" | "history">("main");
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
 
   // Estados del formulario
   const [formData, setFormData] = useState<CreateVehicleEntry>({
@@ -92,6 +93,7 @@ export default function VehicleEntrySystem() {
   const [selectedEntryForPhoto, setSelectedEntryForPhoto] = useState<
     string | null
   >(null);
+  const [photoBlobUrl, setPhotoBlobUrl] = useState<string | null>(null);
 
   // Verificar autenticación al cargar
   useEffect(() => {
@@ -211,7 +213,7 @@ export default function VehicleEntrySystem() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-  
+
     try {
       // ✅ Validar que haya al menos un tipo de vehículo
       if (formData.tipoVehiculo.length === 0) {
@@ -223,7 +225,7 @@ export default function VehicleEntrySystem() {
         setIsSubmitting(false);
         return;
       }
-  
+
       // ✅ Validar que haya al menos un lugar de destino
       const tieneDestino = Object.values(formData.lugarDestino).some(
         (sub) => sub.length > 0
@@ -237,7 +239,7 @@ export default function VehicleEntrySystem() {
         setIsSubmitting(false);
         return;
       }
-  
+
       if (editingEntry) {
         await apiService.updateEntry(editingEntry.id, formData);
         toast({
@@ -256,7 +258,7 @@ export default function VehicleEntrySystem() {
           description: "Entrada registrada correctamente",
         });
       }
-  
+
       resetForm();
       loadEntries(); // Refrescar la lista después de guardar
     } catch (error) {
@@ -272,7 +274,6 @@ export default function VehicleEntrySystem() {
       setIsSubmitting(false);
     }
   };
-  
 
   const handleEdit = (entry: VehicleEntry) => {
     setFormData({
@@ -365,6 +366,28 @@ export default function VehicleEntrySystem() {
       />
     );
   }
+  const handleViewPhoto = async (entryId: string) => {
+    try {
+      const blob = await apiService.getPhoto(entryId);
+      const url = URL.createObjectURL(blob);
+      setPhotoBlobUrl(url);
+      setSelectedPhoto(url); // abre el modal
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo cargar la foto",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownloadPhoto = () => {
+    if (!photoBlobUrl) return;
+    const a = document.createElement("a");
+    a.href = photoBlobUrl;
+    a.download = "foto.jpg";
+    a.click();
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -481,7 +504,7 @@ export default function VehicleEntrySystem() {
                             checked={formData.tipoVehiculo.includes(type)}
                             onCheckedChange={(checked) =>
                               handleVehicleTypeChange(type, checked as boolean)
-                            }                            
+                            }
                           />
                           <Label htmlFor={type} className="text-sm">
                             {type}
@@ -536,7 +559,7 @@ export default function VehicleEntrySystem() {
                                   sublocation,
                                   checked as boolean
                                 )
-                              }                             
+                              }
                             />
                             <Label
                               htmlFor={`${location}-${sublocation}`}
@@ -582,7 +605,7 @@ export default function VehicleEntrySystem() {
                       {editingEntry && (
                         <>
                           <Label htmlFor="fechaSalida">
-                            Fecha de Salida
+                            Fecha de Salida (Opcional)
                           </Label>
                           <Input
                             id="fechaSalida"
@@ -729,15 +752,55 @@ export default function VehicleEntrySystem() {
                         )}
                       </div>
 
-                      {entry.photoUrl && (
-                        <div className="mt-2">
-                          <img
-                            src={entry.photoUrl || "/placeholder.svg"}
-                            alt="Foto de la entrada"
-                            className="w-16 h-16 object-cover rounded border"
-                          />
-                        </div>
-                      )}
+                      <div className="mt-2">
+                        <img
+                          src={entry.photoUrl || "/placeholder.svg"}
+                          alt="Foto de la entrada"
+                          className="w-16 h-16 object-cover rounded border cursor-pointer"
+                          onClick={() => handleViewPhoto(entry.photoUrl)}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src =
+                              "/placeholder.svg";
+                          }}
+                        />
+                      </div>
+
+                      {/* Modal de ver foto en grande */}
+                      <Dialog
+                        open={!!selectedPhoto}
+                        onOpenChange={() => setSelectedPhoto(null)}
+                      >
+                        <DialogContent className="max-w-2xl">
+                          <DialogHeader>
+                            <DialogTitle>Vista de Foto</DialogTitle>
+                          </DialogHeader>
+                          <div className="flex justify-center">
+                            <img
+                              src={selectedPhoto || "/placeholder.svg"}
+                              alt="Vista ampliada"
+                              className="max-h-[70vh] object-contain rounded-lg"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src =
+                                  "/placeholder.svg";
+                              }}
+                            />
+                          </div>
+                          <DialogFooter className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              onClick={handleDownloadPhoto}
+                            >
+                              Descargar
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => setSelectedPhoto(null)}
+                            >
+                              Cerrar
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                     </div>
                   ))
                 )}

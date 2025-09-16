@@ -142,6 +142,19 @@ class ApiService {
     return await response.json()
   }
 
+  async getPhoto(photoUrL: string): Promise<Blob> {
+    const response = await fetch(`https://apicp.acubamos.cu/api${photoUrL}`, {
+      method: "GET",
+      credentials: "include",
+    })
+  
+    if (!response.ok) {
+      throw new Error("No se pudo obtener la foto")
+    }
+  
+    return await response.blob()
+  }  
+  
   // Limpieza manual
   async manualCleanup(): Promise<{ success: boolean; deletedCount: number; message: string }> {
     return this.makeRequest<{ success: boolean; deletedCount: number; message: string }>("/entries/cleanup", {
