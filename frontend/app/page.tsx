@@ -776,7 +776,7 @@ export default function VehicleEntrySystem() {
                           src={entry.photoUrl || "/placeholder.svg"}
                           alt="Foto de la entrada"
                           className="w-16 h-16 object-cover rounded border cursor-pointer"
-                          onClick={() => handleViewPhoto(entry.id)}
+                          onClick={() => handleViewPhoto(entry.photoUrl)}
                           onError={(e) => {
                             (e.target as HTMLImageElement).src =
                               "/placeholder.svg";
