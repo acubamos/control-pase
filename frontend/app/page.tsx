@@ -31,6 +31,7 @@ import {
   Car,
   MapPin,
   Clock,
+  AlertCircle,
 } from "lucide-react";
 import { LoginForm } from "@/components/login-form";
 import { UserMenu } from "@/components/user-menu";
@@ -69,7 +70,7 @@ export default function VehicleEntrySystem() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
-  const [cameraAccessAttempted, setCameraAccessAttempted] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   // Estados del formulario
   const [formData, setFormData] = useState<CreateVehicleEntry>({
@@ -105,7 +106,7 @@ export default function VehicleEntrySystem() {
     checkAuth();
   }, []);
 
-  // Cargar entradas cuando se autentica y configurar refresco automático
+  // Cargar entradas cuando se autentica
   useEffect(() => {
     if (isAuthenticated) {
       loadEntries();
@@ -143,6 +144,7 @@ export default function VehicleEntrySystem() {
   const handleLogout = () => {
     setIsAuthenticated(false);
     setCurrentView("main");
+    setCameraError(null); // Resetear error de cámara al cerrar sesión
   };
 
   const handleQRScan = (qrData: QRData) => {
@@ -334,6 +336,15 @@ export default function VehicleEntrySystem() {
     setSelectedEntryForPhoto(null);
   };
 
+  const handleCameraError = (error: string) => {
+    setCameraError(error);
+    toast({
+      title: "Error de cámara",
+      description: error,
+      variant: "destructive",
+    });
+  };
+
   const formatDateTime = (dateString: string) => {
     return new Date(dateString).toLocaleString("es-ES", {
       year: "numeric",
@@ -366,31 +377,6 @@ export default function VehicleEntrySystem() {
     a.download = "foto.jpg";
     a.click();
   };
-
-  // Manejar el cambio de visibilidad del modal de QR Scanner
-  const handleQRScannerOpenChange = useCallback((open: boolean) => {
-    setShowQRScanner(open);
-    if (!open) {
-      // Cuando se cierra el modal, resetear el estado de intento de cámara
-      setCameraAccessAttempted(false);
-    }
-  }, []);
-
-  // Manejar el error de la cámara en el QR Scanner
-  const handleQRScannerError = useCallback(
-    (error: Error) => {
-      if (!cameraAccessAttempted) {
-        toast({
-          title: "Error de cámara",
-          description:
-            "No se pudo acceder a la cámara. Por favor, verifica los permisos.",
-          variant: "destructive",
-        });
-        setCameraAccessAttempted(true);
-      }
-    },
-    [cameraAccessAttempted]
-  );
 
   if (isLoading) {
     return (
@@ -711,6 +697,12 @@ export default function VehicleEntrySystem() {
                             onClick={() => handlePhotoCapture(entry.id)}
                             variant="outline"
                             size="sm"
+                            disabled={!!cameraError}
+                            title={
+                              cameraError
+                                ? "Cámara no disponible"
+                                : "Tomar foto"
+                            }
                           >
                             <Camera className="h-4 w-4" />
                           </Button>
@@ -832,9 +824,7 @@ export default function VehicleEntrySystem() {
       {/* Modal de ver foto en grande */}
       <Dialog
         open={!!selectedPhoto}
-        onOpenChange={(open) => {
-          if (!open) setSelectedPhoto(null);
-        }}
+        onOpenChange={() => setSelectedPhoto(null)}
       >
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -870,7 +860,6 @@ export default function VehicleEntrySystem() {
         isOpen={showQRScanner}
         onClose={() => setShowQRScanner(false)}
         onScan={handleQRScan}
-        onError={handleQRScannerError}
       />
 
       {selectedEntryForPhoto && (
@@ -882,6 +871,7 @@ export default function VehicleEntrySystem() {
             setSelectedEntryForPhoto(null);
           }}
           onPhotoUploaded={handlePhotoUploaded}
+          onCameraError={handleCameraError}
         />
       )}
 

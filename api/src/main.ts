@@ -15,6 +15,7 @@ async function bootstrap() {
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
   })
 
   // Configurar validación global
