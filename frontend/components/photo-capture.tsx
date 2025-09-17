@@ -84,7 +84,7 @@ export function PhotoCapture({
         videoRef.current.srcObject = newStream;
         // Esperar a que el video esté listo para reproducir
         videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play().catch(error => {
+          videoRef.current?.play().catch((error) => {
             console.error("Error al reproducir video:", error);
           });
         };
@@ -112,7 +112,7 @@ export function PhotoCapture({
     setFacingMode(newFacingMode);
     stopCamera();
     // Pequeña pausa para permitir que la cámara anterior se libere completamente
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await new Promise((resolve) => setTimeout(resolve, 300));
     startCamera();
   };
 
@@ -240,7 +240,7 @@ export function PhotoCapture({
       const timer = setTimeout(() => {
         startCamera();
       }, 100);
-      
+
       return () => clearTimeout(timer);
     } else {
       stopCamera();
@@ -257,131 +257,26 @@ export function PhotoCapture({
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <DialogTitle className="flex items-center gap-2 text-xl">
             <Camera className="h-5 w-5" />
-            {capturedPhoto ? "Vista Previa" : "Agregar Foto"}
+            Subir Foto
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 px-6 pb-6">
-          {capturedPhoto ? (
-            // Vista previa de la foto capturada
-            <div className="space-y-4">
-              <div className="relative rounded-lg overflow-hidden">
-                <img
-                  src={capturedPhoto || "/placeholder.svg"}
-                  alt="Foto capturada"
-                  className="w-full h-64 object-contain bg-black"
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleCapturedPhotoUpload}
-                  disabled={isUploading}
-                  className="flex-1"
-                >
-                  {isUploading ? (
-                    "Subiendo..."
-                  ) : (
-                    <>
-                      <Check className="h-4 w-4 mr-2" />
-                      Usar esta foto
-                    </>
-                  )}
-                </Button>
-                <Button onClick={retakePhoto} variant="outline">
-                  <Camera className="h-4 w-4 mr-2" />
-                  Repetir
-                </Button>
-              </div>
-            </div>
-          ) : stream ? (
-            // Vista de la cámara activa
-            <div className="space-y-4">
-              <div className="relative bg-black rounded-lg overflow-hidden">
-                <video
-                  ref={videoRef}
-                  className="w-full h-64 object-cover"
-                  playsInline
-                  muted
-                  autoPlay
-                />
-                <div className="absolute bottom-2 left-0 right-0 flex justify-center">
-                  <Button
-                    onClick={capturePhoto}
-                    size="lg"
-                    className="rounded-full h-14 w-14 bg-white hover:bg-gray-200 text-black"
-                  >
-                    <Camera className="h-6 w-6" />
-                  </Button>
-                </div>
-                <Button
-                  onClick={switchCamera}
-                  variant="secondary"
-                  size="icon"
-                  className="absolute top-2 right-2 rounded-full h-10 w-10 bg-white/20 backdrop-blur-sm"
-                >
-                  <RotateCcw className="h-5 w-5 text-white" />
-                </Button>
-              </div>
-              <canvas ref={canvasRef} className="hidden" />
+          <div className="space-y-4">
+            <Button
+              onClick={() => fileInputRef.current?.click()}
+              variant="outline"
+              className="w-full h-24 flex-col gap-2"
+              disabled={isUploading}
+            >
+              <Upload className="h-8 w-8" />
+              {isUploading ? "Subiendo..." : "Subir Archivo"}
+            </Button>
 
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => fileInputRef.current?.click()}
-                  variant="outline"
-                  className="flex-1"
-                  disabled={isUploading}
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  {isUploading ? "Subiendo..." : "Subir archivo"}
-                </Button>
-                <Button onClick={handleClose} variant="outline">
-                  Cancelar
-                </Button>
-              </div>
-            </div>
-          ) : (
-            // Opciones iniciales (sin cámara activa)
-            <div className="space-y-4">
-              {cameraError && (
-                <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-md text-sm">
-                  {cameraError}
-                </div>
-              )}
-              
-              {!isCameraSupported && (
-                <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-md text-sm">
-                  La cámara no está disponible en este dispositivo. Puedes subir
-                  una imagen desde tus archivos.
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-4">
-                {isCameraSupported && (
-                  <Button
-                    onClick={startCamera}
-                    className="h-24 flex-col gap-2"
-                    disabled={isUploading}
-                  >
-                    <Camera className="h-8 w-8" />
-                    Tomar Foto
-                  </Button>
-                )}
-                <Button
-                  onClick={() => fileInputRef.current?.click()}
-                  variant="outline"
-                  className="h-24 flex-col gap-2"
-                  disabled={isUploading}
-                >
-                  <Upload className="h-8 w-8" />
-                  {isUploading ? "Subiendo..." : "Subir Archivo"}
-                </Button>
-              </div>
-
-              <p className="text-xs text-center text-muted-foreground">
-                Formatos soportados: JPG, PNG, WEBP, GIF. Máximo 10MB.
-              </p>
-            </div>
-          )}
+            <p className="text-xs text-center text-muted-foreground">
+              Formatos soportados: JPG, PNG, WEBP, GIF. Máximo 10MB.
+            </p>
+          </div>
 
           <input
             ref={fileInputRef}
