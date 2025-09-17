@@ -33,7 +33,7 @@ export class EntriesController {
   constructor(
     @Inject(EntriesService)
     private readonly entriesService: EntriesService,
-  ) {}
+  ) { }
 
   @Post()
   @Roles(UserRole.DAILY_ADMIN, UserRole.WEEKLY_ADMIN, UserRole.YEARLY_ADMIN)
@@ -81,11 +81,8 @@ export class EntriesController {
       storage: diskStorage({
         destination: './uploads',
         filename: (req, file, cb) => {
-          const randomName = Array(32)
-            .fill(null)
-            .map(() => Math.round(Math.random() * 16).toString(16))
-            .join('');
-          cb(null, `${randomName}${extname(file.originalname)}`);
+          // Usa el nombre original del archivo
+          cb(null, file.originalname);
         },
       }),
       fileFilter: (req, file, cb) => {
