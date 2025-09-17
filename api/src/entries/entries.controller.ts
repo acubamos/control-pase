@@ -30,6 +30,7 @@ import { Express, Response } from 'express';
 @Controller('entries')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class EntriesController {
+  private readonly uploadPath = join(process.cwd(), 'uploads');
   constructor(
     @Inject(EntriesService)
     private readonly entriesService: EntriesService,
@@ -79,7 +80,7 @@ export class EntriesController {
   @UseInterceptors(
     FileInterceptor('photo', {
       storage: diskStorage({
-        destination: './uploads',
+        destination: this.uploadPath,
         filename: (req, file, cb) => {
           const randomName = Array(32)
             .fill(null)
