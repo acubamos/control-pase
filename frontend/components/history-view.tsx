@@ -550,7 +550,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                           src={entry.photoUrl || "/placeholder.svg"}
                           alt="Foto de la entrada"
                           className="w-16 h-16 object-cover rounded border cursor-pointer"
-                          onClick={() => handleViewPhoto(entry.id)}
+                          onClick={() => handleViewPhoto(entry.photoUrl)}
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = "/placeholder.svg"
                           }}
@@ -559,7 +559,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            onClick={() => handleViewPhoto(entry.id)}
+                            onClick={() => handleViewPhoto(entry.photoUrl)}
                             title="Ver foto"
                           >
                             <Eye className="h-4 w-4" />
@@ -568,7 +568,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                             variant="outline" 
                             size="sm" 
                             onClick={() => {
-                              handleViewPhoto(entry.id)
+                              handleViewPhoto(entry.photoUrl)
                               setTimeout(handleDownloadPhoto, 100)
                             }}
                             title="Descargar foto"
@@ -621,7 +621,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
       </Dialog>
 
       {/* Modal de Captura de Foto */}
-      {selectedEntryForPhoto && (
+      {/* {selectedEntryForPhoto && (
         <PhotoCapture
           entryId={selectedEntryForPhoto}
           isOpen={showPhotoCapture}
@@ -631,7 +631,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
           }}
           onPhotoUploaded={handlePhotoUploaded}
         />
-      )}
+      )} */}
     </div>
   )
 }
