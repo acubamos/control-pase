@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { toast } from "@/hooks/use-toast"
 import {
   ArrowLeft,
@@ -23,7 +22,6 @@ import {
   Users,
   TrendingUp,
   Camera,
-  Download,
 } from "lucide-react"
 import { UserMenu } from "@/components/user-menu"
 import { ExportMenu } from "@/components/export-menu"
@@ -46,16 +44,14 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
   const [showPhotoCapture, setShowPhotoCapture] = useState(false)
   const [selectedEntryForPhoto, setSelectedEntryForPhoto] = useState<string | null>(null)
   const [editingEntry, setEditingEntry] = useState<VehicleEntry | null>(null)
-  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
-  const [photoBlobUrl, setPhotoBlobUrl] = useState<string | null>(null)
 
   // Filtros
   const [filters, setFilters] = useState({
     dateFrom: "",
     dateTo: "",
-    vehicleType: "all",
+    vehicleType: "all", // Updated default value to 'all'
     location: "",
-    hasExitDate: "all",
+    hasExitDate: "all", // 'all', 'yes', 'no'
   })
 
   const user = authService.getCurrentUser()
@@ -67,30 +63,6 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
   useEffect(() => {
     applyFilters()
   }, [entries, searchTerm, filters])
-
-  // Efecto para cargar la foto como blob para descargar
-  useEffect(() => {
-    if (selectedPhoto && selectedPhoto !== "/placeholder.svg") {
-      fetch(selectedPhoto)
-        .then(response => response.blob())
-        .then(blob => {
-          const blobUrl = URL.createObjectURL(blob)
-          setPhotoBlobUrl(blobUrl)
-        })
-        .catch(() => {
-          setPhotoBlobUrl(null)
-        })
-    } else {
-      setPhotoBlobUrl(null)
-    }
-
-    // Cleanup
-    return () => {
-      if (photoBlobUrl) {
-        URL.revokeObjectURL(photoBlobUrl)
-      }
-    }
-  }, [selectedPhoto])
 
   const loadEntries = async () => {
     try {
@@ -217,17 +189,6 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
   const handlePhotoUploaded = () => {
     loadEntries()
     setSelectedEntryForPhoto(null)
-  }
-
-  const handleDownloadPhoto = () => {
-    if (photoBlobUrl) {
-      const link = document.createElement("a")
-      link.href = photoBlobUrl
-      link.download = `foto-${selectedEntryForPhoto || "entrada"}.jpg`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-    }
   }
 
   const formatDateTime = (dateString: string) => {
@@ -458,7 +419,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                       setFilters({
                         dateFrom: "",
                         dateTo: "",
-                        vehicleType: "all",
+                        vehicleType: "all", // Updated default value to 'all'
                         location: "",
                         hasExitDate: "all",
                       })
@@ -556,14 +517,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                         <img
                           src={entry.photoUrl || "/placeholder.svg"}
                           alt="Foto de la entrada"
-                          className="w-16 h-16 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity"
-                          onClick={() => {
-                            setSelectedPhoto(entry.photoUrl)
-                            setSelectedEntryForPhoto(entry.id)
-                          }}
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src = "/placeholder.svg"
-                          }}
+                          className="w-16 h-16 object-cover rounded border"
                         />
                       </div>
                     )}
@@ -575,49 +529,8 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
         </Card>
       </div>
 
-      {/* Modal de Vista de Foto en Grande */}
-      <Dialog
-        open={!!selectedPhoto}
-        onOpenChange={(open) => {
-          if (!open) setSelectedPhoto(null)
-        }}
-      >
-        <DialogContent className="max-w-2xl max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle>Vista de Foto</DialogTitle>
-          </DialogHeader>
-          <div className="flex justify-center items-center min-h-[400px]">
-            <img
-              src={selectedPhoto || "/placeholder.svg"}
-              alt="Vista ampliada"
-              className="max-h-[60vh] max-w-full object-contain rounded-lg"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = "/placeholder.svg"
-              }}
-            />
-          </div>
-          <DialogFooter className="flex gap-2 sm:justify-end">
-            <Button
-              variant="outline"
-              onClick={handleDownloadPhoto}
-              disabled={!photoBlobUrl}
-              className="flex items-center gap-2"
-            >
-              <Download className="h-4 w-4" />
-              Descargar
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => setSelectedPhoto(null)}
-            >
-              Cerrar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Modal de Captura de Foto */}
-      {selectedEntryForPhoto && (
+      {/* {selectedEntryForPhoto && (
         <PhotoCapture
           entryId={selectedEntryForPhoto}
           isOpen={showPhotoCapture}
@@ -627,7 +540,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
           }}
           onPhotoUploaded={handlePhotoUploaded}
         />
-      )}
+      )} */}
     </div>
   )
 }
