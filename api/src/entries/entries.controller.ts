@@ -33,7 +33,7 @@ export class EntriesController {
   constructor(
     @Inject(EntriesService)
     private readonly entriesService: EntriesService,
-  ) {}
+  ) { }
 
   @Post()
   @Roles(UserRole.DAILY_ADMIN, UserRole.WEEKLY_ADMIN, UserRole.YEARLY_ADMIN)
@@ -80,16 +80,13 @@ export class EntriesController {
     FileInterceptor('photo', {
       storage: diskStorage({
         destination: './uploads',
+        // Ya no generamos nombre aquí, usamos el que viene del frontend
         filename: (req, file, cb) => {
-          const randomName = Array(32)
-            .fill(null)
-            .map(() => Math.round(Math.random() * 16).toString(16))
-            .join('');
-          cb(null, `${randomName}${extname(file.originalname)}`);
+          cb(null, file.originalname); // Usa el nombre que viene del frontend
         },
       }),
       fileFilter: (req, file, cb) => {
-        if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+        if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/i)) {
           return cb(new Error('Solo se permiten archivos de imagen'), false);
         }
         cb(null, true);
