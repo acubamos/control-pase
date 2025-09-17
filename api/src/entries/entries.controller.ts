@@ -108,6 +108,7 @@ export class EntriesController {
   }
 
   @Get(':id/photo')
+  @Roles(UserRole.DAILY_ADMIN, UserRole.WEEKLY_ADMIN, UserRole.YEARLY_ADMIN)
   async getPhoto(@Param('id') id: string, @Res() res: Response) {
     const entry = await this.entriesService.findOne(id);
 
