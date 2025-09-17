@@ -40,6 +40,7 @@ export function PhotoCapture({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   // Verificar soporte de cámara al montar el componente
   useEffect(() => {
@@ -66,19 +67,27 @@ export function PhotoCapture({
 
   const startCamera = async () => {
     try {
-      if (cameraError) return; // No intentar si ya hay un error
+      if (cameraError) return;
 
-      const stream = await navigator.mediaDevices.getUserMedia({
+      const newStream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: "environment",
+          facingMode: facingMode,
           width: { ideal: 1280 },
           height: { ideal: 720 },
         },
       });
 
+      setStream(newStream);
+      streamRef.current = newStream;
+
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        streamRef.current = stream;
+        videoRef.current.srcObject = newStream;
+        // Esperar a que el video esté listo para reproducir
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play().catch(error => {
+            console.error("Error al reproducir video:", error);
+          });
+        };
       }
     } catch (error) {
       const errorMsg = "No se pudo acceder a la cámara. Verifica los permisos.";
@@ -89,19 +98,22 @@ export function PhotoCapture({
   };
 
   const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach((track) => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => {
         track.stop();
       });
+      streamRef.current = null;
       setStream(null);
     }
   };
 
-  const switchCamera = () => {
+  const switchCamera = async () => {
     const newFacingMode = facingMode === "user" ? "environment" : "user";
     setFacingMode(newFacingMode);
     stopCamera();
-    setTimeout(() => startCamera(), 300);
+    // Pequeña pausa para permitir que la cámara anterior se libere completamente
+    await new Promise(resolve => setTimeout(resolve, 300));
+    startCamera();
   };
 
   const capturePhoto = () => {
@@ -212,6 +224,7 @@ export function PhotoCapture({
   const handleClose = () => {
     stopCamera();
     setCapturedPhoto(null);
+    setCameraError(null);
     onClose();
   };
 
@@ -224,7 +237,11 @@ export function PhotoCapture({
   useEffect(() => {
     if (isOpen && isCameraSupported) {
       // Pequeño retraso para asegurar que el diálogo esté completamente abierto
-      setTimeout(() => startCamera(), 100);
+      const timer = setTimeout(() => {
+        startCamera();
+      }, 100);
+      
+      return () => clearTimeout(timer);
     } else {
       stopCamera();
     }
@@ -235,7 +252,7 @@ export function PhotoCapture({
   }, [isOpen, isCameraSupported]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="max-w-md p-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <DialogTitle className="flex items-center gap-2 text-xl">
@@ -285,6 +302,7 @@ export function PhotoCapture({
                   className="w-full h-64 object-cover"
                   playsInline
                   muted
+                  autoPlay
                 />
                 <div className="absolute bottom-2 left-0 right-0 flex justify-center">
                   <Button
@@ -316,7 +334,7 @@ export function PhotoCapture({
                   <Upload className="h-4 w-4 mr-2" />
                   {isUploading ? "Subiendo..." : "Subir archivo"}
                 </Button>
-                <Button onClick={stopCamera} variant="outline">
+                <Button onClick={handleClose} variant="outline">
                   Cancelar
                 </Button>
               </div>
@@ -324,6 +342,12 @@ export function PhotoCapture({
           ) : (
             // Opciones iniciales (sin cámara activa)
             <div className="space-y-4">
+              {cameraError && (
+                <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-md text-sm">
+                  {cameraError}
+                </div>
+              )}
+              
               {!isCameraSupported && (
                 <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-md text-sm">
                   La cámara no está disponible en este dispositivo. Puedes subir

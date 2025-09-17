@@ -122,40 +122,24 @@ class ApiService {
   }
 
   async uploadPhoto(entryId: string, file: File): Promise<VehicleEntry> {
-    const token = authService.getToken();
-    
-    // Generar nombre aleatorio (32 caracteres hexadecimales)
-    const generateRandomName = (originalName: string): string => {
-      const randomName = Array(32)
-        .fill(null)
-        .map(() => Math.round(Math.random() * 16).toString(16))
-        .join('');
-      const extension = originalName.substring(originalName.lastIndexOf('.'));
-      return `${randomName}${extension}`;
-    };
-  
-    const randomFileName = generateRandomName(file.name);
-    
-    // Crear nuevo File con el nombre aleatorio
-    const renamedFile = new File([file], randomFileName, { type: file.type });
-  
-    const formData = new FormData();
-    formData.append("photo", renamedFile);
-  
+    const token = authService.getToken()
+    const formData = new FormData()
+    formData.append("photo", file)
+
     const response = await fetch(`${API_BASE_URL}/entries/${entryId}/photo`, {
       method: "POST",
       headers: {
         ...(token && { Authorization: `Bearer ${token}` }),
       },
       body: formData,
-    });
-  
+    })
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || "Error al subir la foto");
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.message || "Error al subir la foto")
     }
-  
-    return await response.json();
+
+    return await response.json()
   }
 
   async getPhoto(photoUrL: string): Promise<Blob> {

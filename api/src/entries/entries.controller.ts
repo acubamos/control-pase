@@ -80,13 +80,16 @@ export class EntriesController {
     FileInterceptor('photo', {
       storage: diskStorage({
         destination: './uploads',
-        // Ya no generamos nombre aquí, usamos el que viene del frontend
         filename: (req, file, cb) => {
-          cb(null, file.originalname); // Usa el nombre que viene del frontend
+          const randomName = Array(32)
+            .fill(null)
+            .map(() => Math.round(Math.random() * 16).toString(16))
+            .join('');
+          cb(null, `${randomName}${extname(file.originalname)}`);
         },
       }),
       fileFilter: (req, file, cb) => {
-        if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/i)) {
+        if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
           return cb(new Error('Solo se permiten archivos de imagen'), false);
         }
         cb(null, true);
