@@ -26,11 +26,10 @@ import { User, UserRole } from '../auth/entities/user.entity';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { Express, Response } from 'express';
-import { existsSync, mkdirSync } from 'fs';
+
 @Controller('entries')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class EntriesController {
-  private readonly uploadPath = join(process.cwd(), 'uploads');
   constructor(
     @Inject(EntriesService)
     private readonly entriesService: EntriesService,
@@ -80,16 +79,7 @@ export class EntriesController {
   @UseInterceptors(
     FileInterceptor('photo', {
       storage: diskStorage({
-        destination: (req, file, cb) => {
-          const uploadPath = join(process.cwd(), 'uploads');
-
-          // Crear directorio si no existe
-          if (!existsSync(uploadPath)) {
-            mkdirSync(uploadPath, { recursive: true });
-          }
-
-          cb(null, uploadPath);
-        },
+        destination: './uploads',
         filename: (req, file, cb) => {
           const randomName = Array(32)
             .fill(null)
@@ -105,7 +95,7 @@ export class EntriesController {
         cb(null, true);
       },
       limits: {
-        fileSize: 5 * 1024 * 1024,
+        fileSize: 5 * 1024 * 1024, // 5MB
       },
     }),
   )
@@ -118,7 +108,6 @@ export class EntriesController {
   }
 
   @Get(':id/photo')
-  @Roles(UserRole.DAILY_ADMIN, UserRole.WEEKLY_ADMIN, UserRole.YEARLY_ADMIN)
   async getPhoto(@Param('id') id: string, @Res() res: Response) {
     const entry = await this.entriesService.findOne(id);
 
