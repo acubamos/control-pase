@@ -444,7 +444,7 @@ export default function VehicleEntrySystem() {
                     <h3 className="text-sm font-medium text-gray-900">
                       Datos Personales
                     </h3>
-                    <Button
+                    {/* <Button
                       type="button"
                       onClick={() => setShowQRScanner(true)}
                       variant="outline"
@@ -452,7 +452,7 @@ export default function VehicleEntrySystem() {
                     >
                       <QrCode className="h-4 w-4 mr-2" />
                       Escanear QR
-                    </Button>
+                    </Button> */}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -26,7 +26,7 @@ import { User, UserRole } from '../auth/entities/user.entity';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { Express, Response } from 'express';
-
+import { existsSync, mkdirSync } from 'fs';
 @Controller('entries')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class EntriesController {
@@ -80,7 +80,16 @@ export class EntriesController {
   @UseInterceptors(
     FileInterceptor('photo', {
       storage: diskStorage({
-        destination: this.uploadPath,
+        destination: (req, file, cb) => {
+          const uploadPath = join(process.cwd(), 'uploads');
+
+          // Crear directorio si no existe
+          if (!existsSync(uploadPath)) {
+            mkdirSync(uploadPath, { recursive: true });
+          }
+
+          cb(null, uploadPath);
+        },
         filename: (req, file, cb) => {
           const randomName = Array(32)
             .fill(null)
@@ -96,7 +105,7 @@ export class EntriesController {
         cb(null, true);
       },
       limits: {
-        fileSize: 5 * 1024 * 1024, // 5MB
+        fileSize: 5 * 1024 * 1024,
       },
     }),
   )
