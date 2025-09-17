@@ -1,14 +1,26 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { toast } from "@/hooks/use-toast"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { toast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
   Search,
@@ -25,32 +37,34 @@ import {
   Camera,
   Eye,
   Download,
-} from "lucide-react"
-import { UserMenu } from "@/components/user-menu"
-import { ExportMenu } from "@/components/export-menu"
-import { PhotoCapture } from "@/components/photo-capture"
-import { apiService, type VehicleEntry } from "@/lib/api-services"
-import { authService } from "@/lib/auth-service"
+} from "lucide-react";
+import { UserMenu } from "@/components/user-menu";
+import { ExportMenu } from "@/components/export-menu";
+import { PhotoCapture } from "@/components/photo-capture";
+import { apiService, type VehicleEntry } from "@/lib/api-services";
+import { authService } from "@/lib/auth-service";
 
 interface HistoryViewProps {
-  onBack: () => void
-  onLogout: () => void
+  onBack: () => void;
+  onLogout: () => void;
 }
 
 export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
-  const [entries, setEntries] = useState<VehicleEntry[]>([])
-  const [filteredEntries, setFilteredEntries] = useState<VehicleEntry[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedEntries, setSelectedEntries] = useState<string[]>([])
-  const [showFilters, setShowFilters] = useState(false)
-  const [showPhotoCapture, setShowPhotoCapture] = useState(false)
-  const [selectedEntryForPhoto, setSelectedEntryForPhoto] = useState<string | null>(null)
-  const [editingEntry, setEditingEntry] = useState<VehicleEntry | null>(null)
-  
+  const [entries, setEntries] = useState<VehicleEntry[]>([]);
+  const [filteredEntries, setFilteredEntries] = useState<VehicleEntry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedEntries, setSelectedEntries] = useState<string[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
+  const [showPhotoCapture, setShowPhotoCapture] = useState(false);
+  const [selectedEntryForPhoto, setSelectedEntryForPhoto] = useState<
+    string | null
+  >(null);
+  const [editingEntry, setEditingEntry] = useState<VehicleEntry | null>(null);
+
   // Nuevos estados para manejar la visualización y descarga de fotos
-  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
-  const [photoBlobUrl, setPhotoBlobUrl] = useState<string | null>(null)
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [photoBlobUrl, setPhotoBlobUrl] = useState<string | null>(null);
 
   // Filtros
   const [filters, setFilters] = useState({
@@ -59,36 +73,36 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
     vehicleType: "all",
     location: "",
     hasExitDate: "all",
-  })
+  });
 
-  const user = authService.getCurrentUser()
-
-  useEffect(() => {
-    loadEntries()
-  }, [])
+  const user = authService.getCurrentUser();
 
   useEffect(() => {
-    applyFilters()
-  }, [entries, searchTerm, filters])
+    loadEntries();
+  }, []);
+
+  useEffect(() => {
+    applyFilters();
+  }, [entries, searchTerm, filters]);
 
   const loadEntries = async () => {
     try {
-      setIsLoading(true)
-      const data = await apiService.getEntries()
-      setEntries(data)
+      setIsLoading(true);
+      const data = await apiService.getEntries();
+      setEntries(data);
     } catch (error) {
       toast({
         title: "Error",
         description: "No se pudieron cargar las entradas",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const applyFilters = () => {
-    let filtered = entries
+    let filtered = entries;
 
     // Filtro de búsqueda
     if (searchTerm) {
@@ -97,131 +111,142 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
           entry.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
           entry.apellidos.toLowerCase().includes(searchTerm.toLowerCase()) ||
           entry.ci.includes(searchTerm) ||
-          entry.chapa.toLowerCase().includes(searchTerm.toLowerCase()),
-      )
+          entry.chapa.toLowerCase().includes(searchTerm.toLowerCase())
+      );
     }
 
     // Filtro de fecha desde
     if (filters.dateFrom) {
-      filtered = filtered.filter((entry) => new Date(entry.fechaEntrada) >= new Date(filters.dateFrom))
+      filtered = filtered.filter(
+        (entry) => new Date(entry.fechaEntrada) >= new Date(filters.dateFrom)
+      );
     }
 
     // Filtro de fecha hasta
     if (filters.dateTo) {
-      filtered = filtered.filter((entry) => new Date(entry.fechaEntrada) <= new Date(filters.dateTo + "T23:59:59"))
+      filtered = filtered.filter(
+        (entry) =>
+          new Date(entry.fechaEntrada) <= new Date(filters.dateTo + "T23:59:59")
+      );
     }
 
     // Filtro de tipo de vehículo
     if (filters.vehicleType !== "all") {
-      filtered = filtered.filter((entry) => entry.tipoVehiculo.includes(filters.vehicleType))
+      filtered = filtered.filter((entry) =>
+        entry.tipoVehiculo.includes(filters.vehicleType)
+      );
     }
 
     // Filtro de ubicación
     if (filters.location) {
       filtered = filtered.filter((entry) =>
-        Object.keys(entry.lugarDestino).some((lugar) => lugar.toLowerCase().includes(filters.location.toLowerCase())),
-      )
+        Object.keys(entry.lugarDestino).some((lugar) =>
+          lugar.toLowerCase().includes(filters.location.toLowerCase())
+        )
+      );
     }
 
     // Filtro de fecha de salida
     if (filters.hasExitDate === "yes") {
-      filtered = filtered.filter((entry) => entry.fechaSalida)
+      filtered = filtered.filter((entry) => entry.fechaSalida);
     } else if (filters.hasExitDate === "no") {
-      filtered = filtered.filter((entry) => !entry.fechaSalida)
+      filtered = filtered.filter((entry) => !entry.fechaSalida);
     }
 
-    setFilteredEntries(filtered)
-  }
+    setFilteredEntries(filtered);
+  };
 
   const handleSelectEntry = (entryId: string, checked: boolean) => {
-    setSelectedEntries((prev) => (checked ? [...prev, entryId] : prev.filter((id) => id !== entryId)))
-  }
+    setSelectedEntries((prev) =>
+      checked ? [...prev, entryId] : prev.filter((id) => id !== entryId)
+    );
+  };
 
   const handleSelectAll = (checked: boolean) => {
-    setSelectedEntries(checked ? filteredEntries.map((entry) => entry.id) : [])
-  }
+    setSelectedEntries(checked ? filteredEntries.map((entry) => entry.id) : []);
+  };
 
   const handleDeleteSelected = async () => {
-    if (selectedEntries.length === 0) return
+    if (selectedEntries.length === 0) return;
 
-    const confirmMessage = `¿Estás seguro de que quieres eliminar ${selectedEntries.length} entrada(s)?`
-    if (!confirm(confirmMessage)) return
+    const confirmMessage = `¿Estás seguro de que quieres eliminar ${selectedEntries.length} entrada(s)?`;
+    if (!confirm(confirmMessage)) return;
 
     try {
-      await apiService.deleteMultipleEntries(selectedEntries)
+      await apiService.deleteMultipleEntries(selectedEntries);
       toast({
         title: "Éxito",
         description: `${selectedEntries.length} entrada(s) eliminada(s) correctamente`,
-      })
-      setSelectedEntries([])
-      loadEntries()
+      });
+      setSelectedEntries([]);
+      loadEntries();
     } catch (error) {
       toast({
         title: "Error",
         description: "Error al eliminar las entradas",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   const handleManualCleanup = async () => {
     if (
       !confirm(
-        "¿Estás seguro de que quieres realizar una limpieza manual? Esto eliminará entradas según las reglas configuradas.",
+        "¿Estás seguro de que quieres realizar una limpieza manual? Esto eliminará entradas según las reglas configuradas."
       )
     )
-      return
+      return;
 
     try {
-      const result = await authService.manualCleanup()
+      const result = await authService.manualCleanup();
       toast({
         title: "Limpieza completada",
         description: `${result.deletedCount} entradas eliminadas`,
-      })
-      loadEntries()
+      });
+      loadEntries();
     } catch (error) {
       toast({
         title: "Error",
         description: "Error al realizar la limpieza",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   const handlePhotoCapture = (entryId: string) => {
-    setSelectedEntryForPhoto(entryId)
-    setShowPhotoCapture(true)
-  }
+    setSelectedEntryForPhoto(entryId);
+    setShowPhotoCapture(true);
+  };
 
   const handlePhotoUploaded = () => {
-    loadEntries()
-    setSelectedEntryForPhoto(null)
-  }
+    loadEntries();
+    setSelectedEntryForPhoto(null);
+  };
 
   // Función para ver la foto en modal
   const handleViewPhoto = async (entryId: string) => {
     try {
-      const blob = await apiService.getPhoto(entryId)
-      const url = URL.createObjectURL(blob)
-      setPhotoBlobUrl(url)
-      setSelectedPhoto(url)
+      const blob = await apiService.getPhoto(entryId);
+      const url = URL.createObjectURL(blob);
+      setPhotoBlobUrl(url);
+      setSelectedPhoto(url);
     } catch (error) {
       toast({
         title: "Error",
         description: "No se pudo cargar la foto",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   // Función para descargar la foto
   const handleDownloadPhoto = () => {
-    if (!photoBlobUrl) return
-    const a = document.createElement("a")
-    a.href = photoBlobUrl
-    a.download = "foto.jpg"
-    a.click()
-  }
+    if (!photoBlobUrl) return;
+    const a = document.createElement("a");
+    a.href = photoBlobUrl;
+    a.download = "foto.jpg";
+    a.click();
+  };
 
   const formatDateTime = (dateString: string) => {
     return new Date(dateString).toLocaleString("es-ES", {
@@ -230,20 +255,22 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
       day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
-    })
-  }
+    });
+  };
 
   const getStatistics = () => {
-    const total = entries.length
-    const withExit = entries.filter((e) => e.fechaSalida).length
-    const withoutExit = total - withExit
-    const today = new Date().toDateString()
-    const todayEntries = entries.filter((e) => new Date(e.fechaEntrada).toDateString() === today).length
+    const total = entries.length;
+    const withExit = entries.filter((e) => e.fechaSalida).length;
+    const withoutExit = total - withExit;
+    const today = new Date().toDateString();
+    const todayEntries = entries.filter(
+      (e) => new Date(e.fechaEntrada).toDateString() === today
+    ).length;
 
-    return { total, withExit, withoutExit, todayEntries }
-  }
+    return { total, withExit, withoutExit, todayEntries };
+  };
 
-  const stats = getStatistics()
+  const stats = getStatistics();
 
   if (isLoading) {
     return (
@@ -253,7 +280,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
           <p className="mt-2 text-gray-600">Cargando historial...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -267,7 +294,9 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Volver
               </Button>
-              <h1 className="text-xl font-semibold text-gray-900">Historial de Entradas</h1>
+              <h1 className="text-xl font-semibold text-gray-900">
+                Historial de Entradas
+              </h1>
             </div>
             <UserMenu onLogout={onLogout} />
           </div>
@@ -284,8 +313,12 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                   <BarChart3 className="h-6 w-6 text-blue-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Entradas</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    Total Entradas
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {stats.total}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -298,8 +331,12 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                   <Users className="h-6 w-6 text-green-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Con Salida</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.withExit}</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    Con Salida
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {stats.withExit}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -312,8 +349,12 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                   <Clock className="h-6 w-6 text-yellow-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Sin Salida</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.withoutExit}</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    Sin Salida
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {stats.withoutExit}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -327,7 +368,9 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Hoy</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.todayEntries}</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {stats.todayEntries}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -353,7 +396,11 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
 
               {/* Botones de acción */}
               <div className="flex gap-2">
-                <Button onClick={() => setShowFilters(!showFilters)} variant="outline" size="sm">
+                <Button
+                  onClick={() => setShowFilters(!showFilters)}
+                  variant="outline"
+                  size="sm"
+                >
                   <Filter className="h-4 w-4 mr-2" />
                   Filtros
                 </Button>
@@ -361,7 +408,11 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                 <ExportMenu entries={filteredEntries} />
 
                 {selectedEntries.length > 0 && (
-                  <Button onClick={handleDeleteSelected} variant="destructive" size="sm">
+                  <Button
+                    onClick={handleDeleteSelected}
+                    variant="destructive"
+                    size="sm"
+                  >
                     <Trash2 className="h-4 w-4 mr-2" />
                     Eliminar ({selectedEntries.length})
                   </Button>
@@ -380,28 +431,46 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
               <div className="mt-6 pt-6 border-t">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Desde</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Fecha Desde
+                    </label>
                     <Input
                       type="date"
                       value={filters.dateFrom}
-                      onChange={(e) => setFilters((prev) => ({ ...prev, dateFrom: e.target.value }))}
+                      onChange={(e) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          dateFrom: e.target.value,
+                        }))
+                      }
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Hasta</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Fecha Hasta
+                    </label>
                     <Input
                       type="date"
                       value={filters.dateTo}
-                      onChange={(e) => setFilters((prev) => ({ ...prev, dateTo: e.target.value }))}
+                      onChange={(e) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          dateTo: e.target.value,
+                        }))
+                      }
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Vehículo</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Tipo de Vehículo
+                    </label>
                     <Select
                       value={filters.vehicleType}
-                      onValueChange={(value) => setFilters((prev) => ({ ...prev, vehicleType: value }))}
+                      onValueChange={(value) =>
+                        setFilters((prev) => ({ ...prev, vehicleType: value }))
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Todos" />
@@ -419,19 +488,30 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Ubicación</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Ubicación
+                    </label>
                     <Input
                       placeholder="Filtrar por ubicación"
                       value={filters.location}
-                      onChange={(e) => setFilters((prev) => ({ ...prev, location: e.target.value }))}
+                      onChange={(e) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          location: e.target.value,
+                        }))
+                      }
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Estado de Salida</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Estado de Salida
+                    </label>
                     <Select
                       value={filters.hasExitDate}
-                      onValueChange={(value) => setFilters((prev) => ({ ...prev, hasExitDate: value }))}
+                      onValueChange={(value) =>
+                        setFilters((prev) => ({ ...prev, hasExitDate: value }))
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -474,7 +554,10 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
               <CardTitle>Entradas ({filteredEntries.length})</CardTitle>
               <div className="flex items-center space-x-2">
                 <Checkbox
-                  checked={selectedEntries.length === filteredEntries.length && filteredEntries.length > 0}
+                  checked={
+                    selectedEntries.length === filteredEntries.length &&
+                    filteredEntries.length > 0
+                  }
                   onCheckedChange={handleSelectAll}
                 />
                 <span className="text-sm text-gray-600">Seleccionar todo</span>
@@ -484,15 +567,22 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
           <CardContent>
             <div className="space-y-4">
               {filteredEntries.length === 0 ? (
-                <p className="text-center text-gray-500 py-8">No se encontraron entradas con los filtros aplicados</p>
+                <p className="text-center text-gray-500 py-8">
+                  No se encontraron entradas con los filtros aplicados
+                </p>
               ) : (
                 filteredEntries.map((entry) => (
-                  <div key={entry.id} className="border rounded-lg p-4 space-y-3">
+                  <div
+                    key={entry.id}
+                    className="border rounded-lg p-4 space-y-3"
+                  >
                     <div className="flex justify-between items-start">
                       <div className="flex items-start gap-3">
                         <Checkbox
                           checked={selectedEntries.includes(entry.id)}
-                          onCheckedChange={(checked) => handleSelectEntry(entry.id, checked as boolean)}
+                          onCheckedChange={(checked) =>
+                            handleSelectEntry(entry.id, checked as boolean)
+                          }
                         />
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
@@ -507,7 +597,11 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button onClick={() => handlePhotoCapture(entry.id)} variant="outline" size="sm">
+                        <Button
+                          onClick={() => handlePhotoCapture(entry.id)}
+                          variant="outline"
+                          size="sm"
+                        >
                           <Camera className="h-4 w-4" />
                         </Button>
                       </div>
@@ -517,23 +611,34 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                       <Car className="h-4 w-4 text-gray-500" />
                       <div className="flex gap-1">
                         {entry.tipoVehiculo.map((tipo) => (
-                          <Badge key={tipo} variant="secondary" className="text-xs">
+                          <Badge
+                            key={tipo}
+                            variant="secondary"
+                            className="text-xs"
+                          >
                             {tipo}
                           </Badge>
                         ))}
                       </div>
-                      <span className="text-sm text-gray-600">- {entry.chapa}</span>
+                      <span className="text-sm text-gray-600">
+                        - {entry.chapa}
+                      </span>
                     </div>
 
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-gray-500" />
                       <div className="flex flex-wrap gap-1">
-                        {Object.entries(entry.lugarDestino).map(([lugar, sublugares]) =>
-                          sublugares.map((sublugar) => (
-                            <Badge key={`${lugar}-${sublugar}`} variant="outline" className="text-xs">
-                              {lugar} - {sublugar}
-                            </Badge>
-                          )),
+                        {Object.entries(entry.lugarDestino).map(
+                          ([lugar, sublugares]) =>
+                            sublugares.map((sublugar) => (
+                              <Badge
+                                key={`${lugar}-${sublugar}`}
+                                variant="outline"
+                                className="text-xs"
+                              >
+                                {lugar} - {sublugar}
+                              </Badge>
+                            ))
                         )}
                       </div>
                     </div>
@@ -541,39 +646,33 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Calendar className="h-4 w-4" />
                       <span>Entrada: {formatDateTime(entry.fechaEntrada)}</span>
-                      {entry.fechaSalida && <span>• Salida: {formatDateTime(entry.fechaSalida)}</span>}
+                      {entry.fechaSalida && (
+                        <span>
+                          • Salida: {formatDateTime(entry.fechaSalida)}
+                        </span>
+                      )}
                     </div>
 
                     {entry.photoUrl && (
                       <div className="mt-2 flex items-center gap-2">
-                        <img
+                        {/* <img
                           src={entry.photoUrl || "/placeholder.svg"}
                           alt="Foto de la entrada"
                           className="w-16 h-16 object-cover rounded border cursor-pointer"
                           onClick={() => handleViewPhoto(entry.photoUrl)}
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = "/placeholder.svg"
+                            (e.target as HTMLImageElement).src =
+                              "/placeholder.svg";
                           }}
-                        />
+                        /> */}
                         <div className="flex gap-1">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => handleViewPhoto(entry.photoUrl)}
                             title="Ver foto"
                           >
                             <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => {
-                              handleViewPhoto(entry.photoUrl)
-                              setTimeout(handleDownloadPhoto, 100)
-                            }}
-                            title="Descargar foto"
-                          >
-                            <Download className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
@@ -601,7 +700,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
               alt="Vista ampliada"
               className="max-h-[70vh] object-contain rounded-lg"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = "/placeholder.svg"
+                (e.target as HTMLImageElement).src = "/placeholder.svg";
               }}
             />
           </div>
@@ -633,5 +732,5 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
         />
       )} */}
     </div>
-  )
+  );
 }
