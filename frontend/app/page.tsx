@@ -618,7 +618,7 @@ export default function VehicleEntrySystem() {
                       {editingEntry && (
                         <>
                           <Label htmlFor="fechaSalida">
-                            Fecha de Salida (Opcional)
+                            Fecha de Salida
                           </Label>
                           <Input
                             id="fechaSalida"

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { toast } from "@/hooks/use-toast"
 import {
   ArrowLeft,
@@ -22,6 +23,8 @@ import {
   Users,
   TrendingUp,
   Camera,
+  Eye,
+  Download,
 } from "lucide-react"
 import { UserMenu } from "@/components/user-menu"
 import { ExportMenu } from "@/components/export-menu"
@@ -44,14 +47,18 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
   const [showPhotoCapture, setShowPhotoCapture] = useState(false)
   const [selectedEntryForPhoto, setSelectedEntryForPhoto] = useState<string | null>(null)
   const [editingEntry, setEditingEntry] = useState<VehicleEntry | null>(null)
+  
+  // Nuevos estados para manejar la visualización y descarga de fotos
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
+  const [photoBlobUrl, setPhotoBlobUrl] = useState<string | null>(null)
 
   // Filtros
   const [filters, setFilters] = useState({
     dateFrom: "",
     dateTo: "",
-    vehicleType: "all", // Updated default value to 'all'
+    vehicleType: "all",
     location: "",
-    hasExitDate: "all", // 'all', 'yes', 'no'
+    hasExitDate: "all",
   })
 
   const user = authService.getCurrentUser()
@@ -189,6 +196,31 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
   const handlePhotoUploaded = () => {
     loadEntries()
     setSelectedEntryForPhoto(null)
+  }
+
+  // Función para ver la foto en modal
+  const handleViewPhoto = async (entryId: string) => {
+    try {
+      const blob = await apiService.getPhoto(entryId)
+      const url = URL.createObjectURL(blob)
+      setPhotoBlobUrl(url)
+      setSelectedPhoto(url)
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo cargar la foto",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Función para descargar la foto
+  const handleDownloadPhoto = () => {
+    if (!photoBlobUrl) return
+    const a = document.createElement("a")
+    a.href = photoBlobUrl
+    a.download = "foto.jpg"
+    a.click()
   }
 
   const formatDateTime = (dateString: string) => {
@@ -419,7 +451,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                       setFilters({
                         dateFrom: "",
                         dateTo: "",
-                        vehicleType: "all", // Updated default value to 'all'
+                        vehicleType: "all",
                         location: "",
                         hasExitDate: "all",
                       })
@@ -513,12 +545,37 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                     </div>
 
                     {entry.photoUrl && (
-                      <div className="mt-2">
+                      <div className="mt-2 flex items-center gap-2">
                         <img
                           src={entry.photoUrl || "/placeholder.svg"}
                           alt="Foto de la entrada"
-                          className="w-16 h-16 object-cover rounded border"
+                          className="w-16 h-16 object-cover rounded border cursor-pointer"
+                          onClick={() => handleViewPhoto(entry.id)}
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = "/placeholder.svg"
+                          }}
                         />
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handleViewPhoto(entry.id)}
+                            title="Ver foto"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => {
+                              handleViewPhoto(entry.id)
+                              setTimeout(handleDownloadPhoto, 100)
+                            }}
+                            title="Descargar foto"
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -529,8 +586,42 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
         </Card>
       </div>
 
+      {/* Modal de ver foto en grande */}
+      <Dialog
+        open={!!selectedPhoto}
+        onOpenChange={() => setSelectedPhoto(null)}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Vista de Foto</DialogTitle>
+          </DialogHeader>
+          <div className="flex justify-center">
+            <img
+              src={selectedPhoto || "/placeholder.svg"}
+              alt="Vista ampliada"
+              className="max-h-[70vh] object-contain rounded-lg"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = "/placeholder.svg"
+              }}
+            />
+          </div>
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleDownloadPhoto}
+              disabled={!photoBlobUrl}
+            >
+              Descargar
+            </Button>
+            <Button variant="outline" onClick={() => setSelectedPhoto(null)}>
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Modal de Captura de Foto */}
-      {/* {selectedEntryForPhoto && (
+      {selectedEntryForPhoto && (
         <PhotoCapture
           entryId={selectedEntryForPhoto}
           isOpen={showPhotoCapture}
@@ -540,7 +631,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
           }}
           onPhotoUploaded={handlePhotoUploaded}
         />
-      )} */}
+      )}
     </div>
   )
 }
