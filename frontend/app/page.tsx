@@ -32,6 +32,7 @@ import {
   MapPin,
   Clock,
   AlertCircle,
+  LogOut,
 } from "lucide-react";
 import { LoginForm } from "@/components/login-form";
 import { UserMenu } from "@/components/user-menu";
@@ -57,11 +58,26 @@ const VEHICLE_TYPES = [
 
 const LOCATIONS = {
   "Entidades": ["Acubamos SURL", "Supergigantes", "Agencia de Paquetería", "Etecsa","Azumat OC", "Azumat UEB SG"],
-  //"Edificio B": ["Piso 1", "Piso 2", "Piso 3"],
-  //"Edificio C": ["Piso 1", "Piso 2"],
-  //Parqueadero: ["Zona 1", "Zona 2", "Zona 3"],
-  //"Área Externa": ["Entrada Principal", "Entrada Lateral"],
 };
+
+// Función para obtener la hora de La Habana (UTC-5 o UTC-4 dependiendo del horario de verano)
+function getHavanaTime(): string {
+  const now = new Date();
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  
+  // Cuba generalmente está en UTC-5, pero puede tener horario de verano (UTC-4)
+  // Esta es una aproximación simple - para mayor precisión necesitarías una librería como moment-timezone
+  const isDaylightSavingTime = () => {
+    // Cuba generalmente tiene horario de verano de marzo a noviembre
+    const month = now.getUTCMonth();
+    return month >= 2 && month <= 10;
+  };
+  
+  const havanaOffset = isDaylightSavingTime() ? -4 : -5; // UTC-4 o UTC-5
+  const havanaTime = new Date(utc + (havanaOffset * 60 * 60000));
+  
+  return havanaTime.toISOString().slice(0, 16);
+}
 
 export default function VehicleEntrySystem() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -118,7 +134,7 @@ export default function VehicleEntrySystem() {
     if (!editingEntry) {
       setFormData((prev) => ({
         ...prev,
-        fechaEntrada: new Date().toISOString().slice(0, 16),
+        fechaEntrada: getHavanaTime(),
       }));
     }
   }, [editingEntry]);
@@ -206,11 +222,33 @@ export default function VehicleEntrySystem() {
       ci: "",
       tipoVehiculo: [],
       chapa: "",
-      fechaEntrada: new Date().toISOString().slice(0, 16),
+      fechaEntrada: getHavanaTime(),
       lugarDestino: {},
       fechaSalida: "",
     });
     setEditingEntry(null);
+  };
+
+  // Función para registrar la salida de un vehículo
+  const handleRegisterExit = async (entryId: string) => {
+    try {
+      const exitTime = getHavanaTime();
+      await apiService.updateEntry(entryId, { fechaSalida: exitTime });
+      
+      toast({
+        title: "Éxito",
+        description: "Salida registrada correctamente",
+      });
+      
+      // Actualizar la lista de entradas
+      loadEntries();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo registrar la salida",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -610,7 +648,7 @@ export default function VehicleEntrySystem() {
                       />
                       {!editingEntry && (
                         <p className="text-xs text-gray-500 mt-1">
-                          Fecha generada automáticamente
+                          Fecha generada automáticamente (Hora de La Habana)
                         </p>
                       )}
                     </div>
@@ -770,6 +808,21 @@ export default function VehicleEntrySystem() {
                           </span>
                         )}
                       </div>
+
+                      {/* Botón para registrar salida */}
+                      {!entry.fechaSalida && (
+                        <div className="pt-2">
+                          <Button
+                            onClick={() => handleRegisterExit(entry.id)}
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                          >
+                            <LogOut className="h-4 w-4 mr-2" />
+                            Registrar Salida
+                          </Button>
+                        </div>
+                      )}
 
                       <div className="mt-2">
                         <img
