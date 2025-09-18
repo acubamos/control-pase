@@ -60,42 +60,37 @@ const LOCATIONS = {
   "Entidades": ["Acubamos SURL", "Supergigantes", "Agencia de Paquetería", "Etecsa","Azumat OC", "Azumat UEB SG"],
 };
 
-// Función para obtener la hora de La Habana (UTC-5 o UTC-4 dependiendo del horario de verano)
+// Función para obtener la hora actual de La Habana (UTC-5)
 function getHavanaTime(): string {
   const now = new Date();
-  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-  
-  // Cuba generalmente está en UTC-5, pero puede tener horario de verano (UTC-4)
-  // Esta es una aproximación simple - para mayor precisión necesitarías una librería como moment-timezone
-  const isDaylightSavingTime = () => {
-    // Cuba generalmente tiene horario de verano de marzo a noviembre
-    const month = now.getUTCMonth();
-    return month >= 2 && month <= 10;
-  };
-  
-  const havanaOffset = isDaylightSavingTime() ? -4 : -5; // UTC-4 o UTC-5
-  const havanaTime = new Date(utc + (havanaOffset * 60 * 60000));
-  
+  // Ajustar a UTC-5 (La Habana)
+  const havanaTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
   return havanaTime.toISOString().slice(0, 16);
 }
 
-// Función para formatear la hora en formato 12h (AM/PM)
-function formatTimeTo12h(dateString: string): string {
+// Función para formatear fecha y hora en formato 12h (AM/PM)
+function formatDateTimeTo12h(dateString: string): string {
   const date = new Date(dateString);
-  return date.toLocaleString("es-ES", {
-    hour: '2-digit',
-    minute: '2-digit',
+  // Ajustar a UTC-5 (La Habana)
+  const havanaDate = new Date(date.getTime() - (5 * 60 * 60 * 1000));
+  
+  return havanaDate.toLocaleString("es-ES", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
     hour12: true
   });
 }
 
-// Función para formatear fecha y hora completa en formato 12h
-function formatDateTimeTo12h(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleString("es-ES", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
+// Función para obtener la hora actual de La Habana en formato 12h para mostrar
+function getCurrentHavanaTime12h(): string {
+  const now = new Date();
+  // Ajustar a UTC-5 (La Habana)
+  const havanaTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+  
+  return havanaTime.toLocaleString("es-ES", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: true
@@ -110,6 +105,7 @@ export default function VehicleEntrySystem() {
   const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState<string>(getCurrentHavanaTime12h());
 
   // Estados del formulario
   const [formData, setFormData] = useState<CreateVehicleEntry>({
@@ -135,6 +131,15 @@ export default function VehicleEntrySystem() {
     string | null
   >(null);
   const [photoBlobUrl, setPhotoBlobUrl] = useState<string | null>(null);
+
+  // Actualizar la hora actual cada minuto
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(getCurrentHavanaTime12h());
+    }, 60000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   // Verificar autenticación al cargar
   useEffect(() => {
@@ -183,7 +188,7 @@ export default function VehicleEntrySystem() {
   const handleLogout = () => {
     setIsAuthenticated(false);
     setCurrentView("main");
-    setCameraError(null); // Resetear error de cámara al cerrar sesión
+    setCameraError(null);
   };
 
   const handleQRScan = (qrData: QRData) => {
@@ -263,7 +268,6 @@ export default function VehicleEntrySystem() {
         description: "Salida registrada correctamente",
       });
       
-      // Actualizar la lista de entradas
       loadEntries();
     } catch (error) {
       toast({
@@ -279,7 +283,6 @@ export default function VehicleEntrySystem() {
     setIsSubmitting(true);
 
     try {
-      // ✅ Validar que haya al menos un tipo de vehículo
       if (formData.tipoVehiculo.length === 0) {
         toast({
           title: "Validación",
@@ -290,7 +293,6 @@ export default function VehicleEntrySystem() {
         return;
       }
 
-      // ✅ Validar que haya al menos un lugar de destino
       const tieneDestino = Object.values(formData.lugarDestino).some(
         (sub) => sub.length > 0
       );
@@ -311,10 +313,9 @@ export default function VehicleEntrySystem() {
           description: "Entrada actualizada correctamente",
         });
       } else {
-        // Enviar fecha de salida vacía para nuevas entradas
         const entryData = {
           ...formData,
-          fechaSalida: formData.fechaSalida || "", // Asegurar string vacío si es null/undefined
+          fechaSalida: formData.fechaSalida || "",
         };
         await apiService.createEntry(entryData);
         toast({
@@ -324,7 +325,7 @@ export default function VehicleEntrySystem() {
       }
 
       resetForm();
-      loadEntries(); // Refrescar la lista después de guardar
+      loadEntries();
     } catch (error) {
       toast({
         title: "Error",
@@ -363,11 +364,9 @@ export default function VehicleEntrySystem() {
 
     try {
       await apiService.deleteEntry(entryToDelete);
-      // Actualizar la lista localmente y forzar recarga
       setEntries((prevEntries) =>
         prevEntries.filter((entry) => entry.id !== entryToDelete)
       );
-      // Recargar entradas para asegurar que los datos estén actualizados
       loadEntries();
       setShowConfirmModal(false);
       setEntryToDelete(null);
@@ -393,7 +392,7 @@ export default function VehicleEntrySystem() {
   };
 
   const handlePhotoUploaded = (photoUrl: string) => {
-    loadEntries(); // Refrescar después de subir foto
+    loadEntries();
     setSelectedEntryForPhoto(null);
   };
 
@@ -407,14 +406,7 @@ export default function VehicleEntrySystem() {
   };
 
   const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString("es-ES", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true
-    });
+    return formatDateTimeTo12h(dateString);
   };
 
   const handleViewPhoto = async (entryId: string) => {
@@ -422,7 +414,7 @@ export default function VehicleEntrySystem() {
       const blob = await apiService.getPhoto(entryId);
       const url = URL.createObjectURL(blob);
       setPhotoBlobUrl(url);
-      setSelectedPhoto(url); // abre el modal
+      setSelectedPhoto(url);
     } catch (error) {
       toast({
         title: "Error",
@@ -470,9 +462,14 @@ export default function VehicleEntrySystem() {
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <h1 className="text-xl font-semibold text-gray-900">
-              Sistema de Gestión de Entradas
-            </h1>
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">
+                Sistema de Gestión de Entradas
+              </h1>
+              <p className="text-sm text-gray-500">
+                Hora de La Habana: {currentTime}
+              </p>
+            </div>
             <div className="flex items-center gap-4">
               <Button
                 onClick={() => setCurrentView("history")}
@@ -506,15 +503,6 @@ export default function VehicleEntrySystem() {
                     <h3 className="text-sm font-medium text-gray-900">
                       Datos Personales
                     </h3>
-                    {/* <Button
-                      type="button"
-                      onClick={() => setShowQRScanner(true)}
-                      variant="outline"
-                      size="sm"
-                    >
-                      <QrCode className="h-4 w-4 mr-2" />
-                      Escanear QR
-                    </Button> */}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -651,7 +639,7 @@ export default function VehicleEntrySystem() {
 
                 <Separator />
 
-                {/* Fechas - Siempre visibles al editar */}
+                {/* Fechas */}
                 <div className="space-y-4">
                   <h3 className="text-sm font-medium text-gray-900">Fechas</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -668,7 +656,7 @@ export default function VehicleEntrySystem() {
                           }))
                         }
                         required
-                        disabled={!editingEntry} // Solo editable al modificar
+                        disabled={!editingEntry}
                       />
                       {!editingEntry && (
                         <p className="text-xs text-gray-500 mt-1">
