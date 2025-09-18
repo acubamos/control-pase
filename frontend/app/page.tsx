@@ -56,11 +56,11 @@ const VEHICLE_TYPES = [
 ];
 
 const LOCATIONS = {
-  "Edificio A": ["Piso 1", "Piso 2", "Piso 3", "Piso 4"],
-  "Edificio B": ["Piso 1", "Piso 2", "Piso 3"],
-  "Edificio C": ["Piso 1", "Piso 2"],
-  Parqueadero: ["Zona 1", "Zona 2", "Zona 3"],
-  "Área Externa": ["Entrada Principal", "Entrada Lateral"],
+  "Entidades": ["Acubamos SURL", "Supergigantes", "Agencia de Paquetería", "Etecsa","Azumat OC", "Azumat UEB SG"],
+  //"Edificio B": ["Piso 1", "Piso 2", "Piso 3"],
+  //"Edificio C": ["Piso 1", "Piso 2"],
+  //Parqueadero: ["Zona 1", "Zona 2", "Zona 3"],
+  //"Área Externa": ["Entrada Principal", "Entrada Lateral"],
 };
 
 export default function VehicleEntrySystem() {
