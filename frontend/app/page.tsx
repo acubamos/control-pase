@@ -60,18 +60,20 @@ const LOCATIONS = {
   "Entidades": ["Acubamos SURL", "Supergigantes", "Agencia de Paquetería", "Etecsa","Azumat OC", "Azumat UEB SG"],
 };
 
-// Función para obtener la hora actual de La Habana (UTC-5)
+// 1. Función para obtener hora de La Habana en formato ISO
 function getHavanaTime(): string {
   const now = new Date();
-  const havanaTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Havana"}));
+  const havanaTime = new Date(now.toLocaleString("en-US", {
+    timeZone: "America/Havana"
+  }));
   return havanaTime.toISOString().slice(0, 16);
 }
 
-// Función para formatear fecha y hora en formato 12h (AM/PM)
+// 2. Función para formatear fecha y hora en formato 12h (AM/PM)
 function formatDateTimeTo12h(dateString: string): string {
   const date = new Date(dateString);
-  const havanaDate;
-  return havanaDate.toLocaleString("es-ES", {
+  
+  return date.toLocaleString("es-ES", {
     timeZone: "America/Havana",
     year: "numeric",
     month: "2-digit",
@@ -82,11 +84,11 @@ function formatDateTimeTo12h(dateString: string): string {
   });
 }
 
-// Función para obtener la hora actual de La Habana en formato 12h para mostrar
+// 3. Función para obtener la hora actual de La Habana en formato 12h
 function getCurrentHavanaTime12h(): string {
   const now = new Date();
-  const havanaTime;
-  return havanaTime.toLocaleString("es-ES", {
+  
+  return now.toLocaleString("es-ES", {
     timeZone: "America/Havana",
     hour: "2-digit",
     minute: "2-digit",
