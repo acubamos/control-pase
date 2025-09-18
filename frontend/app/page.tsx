@@ -72,7 +72,7 @@ function getHavanaTime(): string {
 function formatDateTimeTo12h(dateString: string): string {
   const date = new Date(dateString);
   // Ajustar a UTC-5 (La Habana)
-  const havanaDate = new Date(date.getTime() - (5 * 60 * 60 * 1000));
+  const havanaDate = new Date(now.toLocaleString("en-US", {timeZone: "America/Havana"}));
   
   return havanaDate.toLocaleString("es-ES", {
     year: "numeric",
@@ -88,7 +88,7 @@ function formatDateTimeTo12h(dateString: string): string {
 function getCurrentHavanaTime12h(): string {
   const now = new Date();
   // Ajustar a UTC-5 (La Habana)
-  const havanaTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+  const havanaTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Havana"}));
   
   return havanaTime.toLocaleString("es-ES", {
     hour: "2-digit",
@@ -465,10 +465,7 @@ export default function VehicleEntrySystem() {
             <div>
               <h1 className="text-xl font-semibold text-gray-900">
                 Sistema de Gestión de Entradas
-              </h1>
-              <p className="text-sm text-gray-500">
-                Hora de La Habana: {currentTime}
-              </p>
+              </h1>             
             </div>
             <div className="flex items-center gap-4">
               <Button
@@ -656,33 +653,10 @@ export default function VehicleEntrySystem() {
                           }))
                         }
                         required
-                        disabled={!editingEntry}
-                      />
-                      {!editingEntry && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          Fecha generada automáticamente (Hora de La Habana)
-                        </p>
-                      )}
+                        disabled
+                      />                     
                     </div>
-                    <div>
-                      {editingEntry && (
-                        <>
-                          <Label htmlFor="fechaSalida">
-                            Fecha de Salida
-                          </Label>
-                          <Input
-                            id="fechaSalida"
-                            type="datetime-local"
-                            value={formData.fechaSalida}
-                            onChange={(e) =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                fechaSalida: e.target.value,
-                              }))
-                            }
-                          />
-                        </>
-                      )}
+                    <div>                      
                     </div>
                   </div>
                 </div>
