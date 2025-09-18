@@ -60,16 +60,28 @@ const LOCATIONS = {
   "Entidades": ["Acubamos SURL", "Supergigantes", "Agencia de Paquetería", "Etecsa","Azumat OC", "Azumat UEB SG"],
 };
 
-// 1. Función para obtener hora de La Habana en formato ISO
+// 1. Función para obtener hora de La Habana en formato ISO (corregida)
 function getHavanaTime(): string {
   const now = new Date();
-  const havanaTime = new Date(now.toLocaleString("en-US", {
+  
+  // Obtener la hora de La Habana correctamente
+  const havanaTimeStr = now.toLocaleString("en-US", {
     timeZone: "America/Havana"
-  }));
-  return havanaTime.toISOString().slice(0, 16);
+  });
+  
+  const havanaTime = new Date(havanaTimeStr);
+  
+  // Formatear manualmente para mantener la zona horaria
+  const year = havanaTime.getFullYear();
+  const month = String(havanaTime.getMonth() + 1).padStart(2, '0');
+  const day = String(havanaTime.getDate()).padStart(2, '0');
+  const hours = String(havanaTime.getHours()).padStart(2, '0');
+  const minutes = String(havanaTime.getMinutes()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
-// 2. Función para formatear fecha y hora en formato 12h (AM/PM)
+// 2. Función para formatear fecha y hora en formato 12h (AM/PM) - YA CORRECTA
 function formatDateTimeTo12h(dateString: string): string {
   const date = new Date(dateString);
   
@@ -84,7 +96,7 @@ function formatDateTimeTo12h(dateString: string): string {
   });
 }
 
-// 3. Función para obtener la hora actual de La Habana en formato 12h
+// 3. Función para obtener la hora actual de La Habana en formato 12h - YA CORRECTA
 function getCurrentHavanaTime12h(): string {
   const now = new Date();
   
@@ -94,6 +106,17 @@ function getCurrentHavanaTime12h(): string {
     minute: "2-digit",
     hour12: true
   });
+}
+
+// 4. Función alternativa más confiable para hora ISO
+function getHavanaTimeISO(): string {
+  const now = new Date();
+  
+  // Ajustar considerando el offset de Cuba (UTC-4 o UTC-5)
+  const cubaOffset = -4 * 60 * 60 * 1000; // UTC-4 como predeterminado (horario de verano)
+  const havanaTime = new Date(now.getTime() + cubaOffset);
+  
+  return havanaTime.toISOString().slice(0, 16);
 }
 
 export default function VehicleEntrySystem() {
