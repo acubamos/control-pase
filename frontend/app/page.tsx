@@ -79,6 +79,29 @@ function getHavanaTime(): string {
   return havanaTime.toISOString().slice(0, 16);
 }
 
+// Función para formatear la hora en formato 12h (AM/PM)
+function formatTimeTo12h(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleString("es-ES", {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
+}
+
+// Función para formatear fecha y hora completa en formato 12h
+function formatDateTimeTo12h(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleString("es-ES", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true
+  });
+}
+
 export default function VehicleEntrySystem() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -390,6 +413,7 @@ export default function VehicleEntrySystem() {
       day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
+      hour12: true
     });
   };
 
