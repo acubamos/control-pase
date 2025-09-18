@@ -522,6 +522,15 @@ export default function VehicleEntrySystem() {
                     <h3 className="text-sm font-medium text-gray-900">
                       Datos Personales
                     </h3>
+                     <Button
+                      type="button"
+                      onClick={() => setShowQRScanner(true)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <QrCode className="h-4 w-4 mr-2" />
+                      Escanear QR
+                    </Button>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -937,6 +946,11 @@ export default function VehicleEntrySystem() {
       )}
 
       <Toaster />
+       <footer className="bg-blue-800 text-white py-4">
+      <div className="container mx-auto px-4 text-center">
+        <p>© 2025 Acubamos SURL. Todos los derechos reservados.</p>
+      </div>
+    </footer>
     </div>
   );
 }
