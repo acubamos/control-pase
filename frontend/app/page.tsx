@@ -63,18 +63,16 @@ const LOCATIONS = {
 // Función para obtener la hora actual de La Habana (UTC-5)
 function getHavanaTime(): string {
   const now = new Date();
-  // Ajustar a UTC-5 (La Habana)
-  const havanaTime = new Date(now.getTime() - (5 * 60 * 60 * 1000));
+  const havanaTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Havana"}));
   return havanaTime.toISOString().slice(0, 16);
 }
 
 // Función para formatear fecha y hora en formato 12h (AM/PM)
 function formatDateTimeTo12h(dateString: string): string {
   const date = new Date(dateString);
-  // Ajustar a UTC-5 (La Habana)
-  const havanaDate = new Date(now.toLocaleString("en-US", {timeZone: "America/Havana"}));
-  
+  const havanaDate;
   return havanaDate.toLocaleString("es-ES", {
+    timeZone: "America/Havana",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -87,10 +85,9 @@ function formatDateTimeTo12h(dateString: string): string {
 // Función para obtener la hora actual de La Habana en formato 12h para mostrar
 function getCurrentHavanaTime12h(): string {
   const now = new Date();
-  // Ajustar a UTC-5 (La Habana)
-  const havanaTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Havana"}));
-  
+  const havanaTime;
   return havanaTime.toLocaleString("es-ES", {
+    timeZone: "America/Havana",
     hour: "2-digit",
     minute: "2-digit",
     hour12: true
