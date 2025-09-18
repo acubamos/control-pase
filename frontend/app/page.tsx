@@ -52,7 +52,7 @@ const VEHICLE_TYPES = [
   "Camión",
   "Camioneta",
   "Bus",
-  "Bicicleta",
+  "N/A",
 ];
 
 const LOCATIONS = {
