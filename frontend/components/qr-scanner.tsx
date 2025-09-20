@@ -1,13 +1,16 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { QrCode, X, Camera } from "lucide-react"
 import { parseQRData, type QRData } from "@/lib/qr-scanner"
+import QrScanner from "qr-scanner"
+
+// Necesario para que funcione el worker
+QrScanner.WORKER_PATH = "/qr-scanner-worker.min.js"
 
 interface QRScannerProps {
   onScanSuccess: (data: QRData) => void
@@ -19,7 +22,7 @@ export function QRScanner({ onScanSuccess, isOpen, onClose }: QRScannerProps) {
   const [isScanning, setIsScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
-  const streamRef = useRef<MediaStream | null>(null)
+  const qrScannerRef = useRef<QrScanner | null>(null)
 
   useEffect(() => {
     if (isOpen && isScanning) {
@@ -28,22 +31,23 @@ export function QRScanner({ onScanSuccess, isOpen, onClose }: QRScannerProps) {
       stopCamera()
     }
 
-    return () => {
-      stopCamera()
-    }
+    return () => stopCamera()
   }, [isOpen, isScanning])
 
   const startCamera = async () => {
+    if (!videoRef.current) return
+
     try {
       setError(null)
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" }, // Usar cámara trasera en móviles
-      })
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        streamRef.current = stream
-      }
+      qrScannerRef.current = new QrScanner(
+        videoRef.current,
+        (result) => handleQRResult(result.data),
+        {
+          preferredCamera: "environment",
+          highlightScanRegion: true,
+        }
+      )
+      await qrScannerRef.current.start()
     } catch (err) {
       setError("No se pudo acceder a la cámara. Verifica los permisos.")
       console.error("Error accessing camera:", err)
@@ -51,31 +55,13 @@ export function QRScanner({ onScanSuccess, isOpen, onClose }: QRScannerProps) {
   }
 
   const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop())
-      streamRef.current = null
-    }
+    qrScannerRef.current?.stop()
+    qrScannerRef.current?.destroy()
+    qrScannerRef.current = null
   }
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const text = e.target?.result as string
-      // Aquí normalmente usarías una librería de QR como jsQR
-      // Por simplicidad, simulamos el escaneo
-      simulateQRScan(text)
-    }
-    reader.readAsDataURL(file)
-  }
-
-  const simulateQRScan = (qrText: string) => {
-    // Simulación para pruebas - en producción usar jsQR o similar
-    const testQR = "N:HASSAN ALEJANDROA:RODRIGUEZ PEREZCI:99032608049"
-    const data = parseQRData(testQR)
-
+  const handleQRResult = (result: string) => {
+    const data = parseQRData(result)
     if (data) {
       onScanSuccess(data)
       onClose()
@@ -84,8 +70,17 @@ export function QRScanner({ onScanSuccess, isOpen, onClose }: QRScannerProps) {
     }
   }
 
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    QrScanner.scanImage(file)
+      .then((result) => handleQRResult(result))
+      .catch(() => setError("No se pudo procesar la imagen."))
+  }
+
   const handleManualInput = () => {
-    // Para pruebas, simular un QR válido
+    // Para pruebas
     const testData: QRData = {
       nombre: "HASSAN ALEJANDRO",
       apellidos: "RODRIGUEZ PEREZ",
