@@ -84,7 +84,7 @@
     "vaul": "latest",
     "jsqr": "^1.4.0",
     "html5-qrcode": "^2.3.8",
-    "react-qr-reader": "^3.0.0",
+    "react-qr-reader": "latest",
     "zod": "^3.22.4"
   },
   "devDependencies": {
