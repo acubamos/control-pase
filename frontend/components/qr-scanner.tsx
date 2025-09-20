@@ -143,7 +143,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
                 muted
                 autoPlay
               />
-              <canvas ref={canvasRef} className="hidden" />
+              <canvas ref={canvasRef}/>
 
               {isScanning && (
                 <div className="absolute inset-0 flex items-center justify-center">
