@@ -27,11 +27,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       setIsScanning(true)
 
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "environment",
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
+        video: { facingMode: { ideal: "environment" } },
       })
 
       streamRef.current = stream
@@ -39,10 +35,13 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         await videoRef.current.play()
-      }
 
-      // Iniciar escaneo cada 100ms para mejor rendimiento
-      intervalRef.current = setInterval(scanFrame, 100)
+        // esperar un poco antes de iniciar el escaneo en móviles
+        setTimeout(() => {
+          if (intervalRef.current) clearInterval(intervalRef.current)
+          intervalRef.current = setInterval(scanFrame, 150)
+        }, 500)
+      }
     } catch (err) {
       setError("No se pudo acceder a la cámara. Asegúrate de dar los permisos necesarios.")
       setIsScanning(false)
@@ -72,23 +71,17 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
 
     if (!context || video.readyState !== video.HAVE_ENOUGH_DATA) return
 
-    // Ajustar el tamaño del canvas al video
     canvas.width = video.videoWidth
     canvas.height = video.videoHeight
-    
-    // Dibujar el frame actual en el canvas
+
     context.drawImage(video, 0, 0, canvas.width, canvas.height)
-    
-    // Obtener los datos de la imagen para el escaneo
+
     const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-    
-    // Escanear el código QR
     const code = jsQR(imageData.data, imageData.width, imageData.height, {
       inversionAttempts: "dontInvert",
     })
 
     if (code) {
-      // QR detectado, procesar los datos
       const qrData = parseQRData(code.data)
       if (qrData) {
         onScan(qrData)
@@ -143,11 +136,12 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
             </div>
           ) : (
             <div className="relative">
-              <video 
-                ref={videoRef} 
-                className="w-full h-64 bg-black rounded-lg object-cover" 
-                playsInline 
-                muted 
+              <video
+                ref={videoRef}
+                className="w-full h-64 bg-black rounded-lg object-cover"
+                playsInline
+                muted
+                autoPlay
               />
               <canvas ref={canvasRef} className="hidden" />
 
