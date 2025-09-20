@@ -37,7 +37,7 @@ import {
 import { LoginForm } from "@/components/login-form";
 import { UserMenu } from "@/components/user-menu";
 import { HistoryView } from "@/components/history-view";
-import {QRScanner}  from "@/components/qr-scanner";
+import { QRScanner }  from "@/components/qr-scanner";
 import { PhotoCapture } from "@/components/photo-capture";
 import { authService } from "@/lib/auth-service";
 import {

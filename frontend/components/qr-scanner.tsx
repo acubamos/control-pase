@@ -14,7 +14,7 @@ interface QRScannerProps {
   onScanSuccess: (data: QRData) => void
 }
 
-export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerProps) {
+export  function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isScanning, setIsScanning] = useState(false)
