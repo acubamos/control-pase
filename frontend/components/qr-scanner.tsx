@@ -134,7 +134,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
                 Intentar de nuevo
               </Button>
             </div>
-          ) : 
+          ) : (
             <div className="relative">
               <video
                 ref={videoRef}
