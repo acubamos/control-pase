@@ -6,10 +6,7 @@ import { Camera, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { parseQRData, type QRData } from "@/lib/qr-scanner"
 
-const QrScanner = dynamic(
-  () => import("@yudiel/react-qr-scanner").then((mod) => mod.QrScanner),
-  { ssr: false }
-)
+const QrReader = dynamic(() => import("react-qr-reader"), { ssr: false })
 
 interface QRScannerProps {
   onScan: (data: QRData) => void
@@ -28,6 +25,10 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     }
   }
 
+  const handleError = (err: unknown) => {
+    console.error("Error de QR:", err)
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
@@ -39,11 +40,14 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         </DialogHeader>
 
         <div className="space-y-4">
-          <QrScanner
-            onDecode={handleScan}
-            onError={(err) => console.error("Error de QR:", err)}
+          <QrReader
             constraints={{ facingMode: "environment" }}
-            className="w-full h-64 rounded-lg"
+            onResult={(result, error) => {
+              if (!!result) handleScan(result.getText())
+              if (!!error) handleError(error)
+            }}
+            containerStyle={{ width: "100%", borderRadius: "0.5rem" }}
+            videoStyle={{ borderRadius: "0.5rem" }}
           />
 
           <div className="flex gap-2">
