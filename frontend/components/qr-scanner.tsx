@@ -1,28 +1,25 @@
 "use client"
 
-import type React from "react"
-import { useState, useRef, useEffect } from "react"
+import { useEffect, useRef, useState } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { QrCode, X, Camera } from "lucide-react"
+import { QrCode, Camera, X } from "lucide-react"
+import jsQR from "jsqr"
 import { parseQRData, type QRData } from "@/lib/qr-scanner"
-import QrScanner from "qr-scanner"
-
-// Necesario para que funcione el worker
-QrScanner.WORKER_PATH = "/qr-scanner-worker.min.js"
 
 interface QRScannerProps {
-  onScanSuccess: (data: QRData) => void
   isOpen: boolean
   onClose: () => void
+  onScanSuccess: (data: QRData) => void
 }
 
-export function QRScanner({ onScanSuccess, isOpen, onClose }: QRScannerProps) {
+export default function QRScanner({ isOpen, onClose, onScanSuccess }: QRScannerProps) {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isScanning, setIsScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const qrScannerRef = useRef<QrScanner | null>(null)
+  const frameRef = useRef<number | null>(null)
 
   useEffect(() => {
     if (isOpen && isScanning) {
@@ -30,57 +27,104 @@ export function QRScanner({ onScanSuccess, isOpen, onClose }: QRScannerProps) {
     } else {
       stopCamera()
     }
-
     return () => stopCamera()
   }, [isOpen, isScanning])
 
   const startCamera = async () => {
-    if (!videoRef.current) return
-
     try {
       setError(null)
-      qrScannerRef.current = new QrScanner(
-        videoRef.current,
-        (result) => handleQRResult(result.data),
-        {
-          preferredCamera: "environment",
-          highlightScanRegion: true,
-        }
-      )
-      await qrScannerRef.current.start()
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+      })
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+        videoRef.current.setAttribute("playsinline", "true")
+        videoRef.current.play()
+        requestAnimationFrame(tick)
+      }
     } catch (err) {
-      setError("No se pudo acceder a la cámara. Verifica los permisos.")
-      console.error("Error accessing camera:", err)
+      console.error("Error accediendo a la cámara:", err)
+      setError("No se pudo acceder a la cámara. Verifica permisos.")
     }
   }
 
   const stopCamera = () => {
-    qrScannerRef.current?.stop()
-    qrScannerRef.current?.destroy()
-    qrScannerRef.current = null
-  }
-
-  const handleQRResult = (result: string) => {
-    const data = parseQRData(result)
-    if (data) {
-      onScanSuccess(data)
-      onClose()
-    } else {
-      setError("No se pudo leer el código QR. Intenta de nuevo.")
+    if (videoRef.current?.srcObject) {
+      const tracks = (videoRef.current.srcObject as MediaStream).getTracks()
+      tracks.forEach((track) => track.stop())
+      videoRef.current.srcObject = null
+    }
+    if (frameRef.current) {
+      cancelAnimationFrame(frameRef.current)
     }
   }
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
+  const tick = () => {
+    if (!videoRef.current || !canvasRef.current) {
+      frameRef.current = requestAnimationFrame(tick)
+      return
+    }
+
+    const canvas = canvasRef.current
+    const context = canvas.getContext("2d")
+    if (!context) return
+
+    canvas.width = videoRef.current.videoWidth
+    canvas.height = videoRef.current.videoHeight
+    context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height)
+
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+    const qrCode = jsQR(imageData.data, canvas.width, canvas.height)
+
+    if (qrCode) {
+      const data = parseQRData(qrCode.data)
+      if (data) {
+        onScanSuccess(data)
+        stopCamera()
+        onClose()
+        return
+      } else {
+        setError("El QR no contiene datos válidos.")
+      }
+    }
+
+    frameRef.current = requestAnimationFrame(tick)
+  }
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
     if (!file) return
 
-    QrScanner.scanImage(file)
-      .then((result) => handleQRResult(result))
-      .catch(() => setError("No se pudo procesar la imagen."))
+    const img = new Image()
+    img.onload = () => {
+      if (!canvasRef.current) return
+      const canvas = canvasRef.current
+      const context = canvas.getContext("2d")
+      if (!context) return
+
+      canvas.width = img.width
+      canvas.height = img.height
+      context.drawImage(img, 0, 0, img.width, img.height)
+
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+      const qrCode = jsQR(imageData.data, canvas.width, canvas.height)
+
+      if (qrCode) {
+        const data = parseQRData(qrCode.data)
+        if (data) {
+          onScanSuccess(data)
+          onClose()
+        } else {
+          setError("El QR no contiene datos válidos.")
+        }
+      } else {
+        setError("No se pudo leer el QR de la imagen.")
+      }
+    }
+    img.src = URL.createObjectURL(file)
   }
 
   const handleManualInput = () => {
-    // Para pruebas
     const testData: QRData = {
       nombre: "HASSAN ALEJANDRO",
       apellidos: "RODRIGUEZ PEREZ",
@@ -111,19 +155,20 @@ export function QRScanner({ onScanSuccess, isOpen, onClose }: QRScannerProps) {
             <Card>
               <CardContent className="p-4">
                 <video ref={videoRef} autoPlay playsInline className="w-full h-64 bg-black rounded-lg" />
+                <canvas ref={canvasRef} className="hidden" />
                 <div className="mt-4 flex justify-center">
                   <Button variant="outline" onClick={() => setIsScanning(false)}>
                     <X className="h-4 w-4 mr-2" />
-                    Cancelar Escaneo
+                    Cancelar escaneo
                   </Button>
                 </div>
               </CardContent>
             </Card>
           ) : (
             <div className="space-y-3">
-              <Button onClick={() => setIsScanning(true)} className="w-full" size="lg">
+              <Button className="w-full" size="lg" onClick={() => setIsScanning(true)}>
                 <Camera className="h-4 w-4 mr-2" />
-                Usar Cámara
+                Usar cámara
               </Button>
 
               <div className="relative">
@@ -139,8 +184,8 @@ export function QRScanner({ onScanSuccess, isOpen, onClose }: QRScannerProps) {
                 </Button>
               </div>
 
-              <Button variant="secondary" onClick={handleManualInput} className="w-full" size="sm">
-                Usar Datos de Prueba
+              <Button variant="secondary" size="sm" className="w-full" onClick={handleManualInput}>
+                Usar datos de prueba
               </Button>
             </div>
           )}

@@ -6,31 +6,36 @@ export interface QRData {
 
 export function parseQRData(qrText: string): QRData | null {
   try {
-    // Formato esperado: N:HASSAN ALEJANDROA:RODRIGUEZ PEREZCI:99032608049
-    const parts = qrText.split(":")
+    if (!qrText) return null
 
-    if (parts.length < 4) {
-      return null
+    // 1. Normalizar texto (quitar saltos y espacios dobles)
+    const clean = qrText.replace(/\s+/g, " ").trim()
+
+    // 2. Intentar regex específico de tu formato
+    //    Captura N:..., A:..., CI:...
+    const regex = /N:(?<nombre>.+?)A:(?<apellidos>.+?)CI:(?<ci>\d{11})/i
+    const match = clean.match(regex)
+
+    if (match && match.groups) {
+      return {
+        nombre: match.groups.nombre.trim(),
+        apellidos: match.groups.apellidos.trim(),
+        ci: match.groups.ci.trim(),
+      }
     }
 
-    // Extraer nombre (después de N:)
-    const nombrePart = parts[1]
-
-    // Extraer apellidos (después de A: y antes de CI:)
-    const apellidosPart = parts[2].replace("CI", "")
-
-    // Extraer CI (último número)
-    const ciPart = parts[3]
-
-    if (!nombrePart || !apellidosPart || !ciPart) {
-      return null
+    // 3. Fallback: dividir por separadores
+    const parts = clean.split(/[:;=]/).map((p) => p.trim())
+    if (parts.length >= 6) {
+      const nombre = parts[1]
+      const apellidos = parts[3]
+      const ci = parts[5]
+      if (nombre && apellidos && ci) {
+        return { nombre, apellidos, ci }
+      }
     }
 
-    return {
-      nombre: nombrePart.trim(),
-      apellidos: apellidosPart.trim(),
-      ci: ciPart.trim(),
-    }
+    return null
   } catch (error) {
     console.error("Error parsing QR data:", error)
     return null
