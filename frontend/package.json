@@ -82,6 +82,7 @@
     "tailwindcss-animate": "^1.0.7",
     "ts-node": "latest",
     "vaul": "latest",
+    "qr-scanner": "latest",
     "jsqr": "^1.4.0",
     "html5-qrcode": "^2.3.8",
     "zod": "^3.22.4"
