@@ -41,7 +41,6 @@
     "@radix-ui/react-scroll-area": "latest",
     "@radix-ui/react-select": "latest",
     "@radix-ui/react-separator": "latest",
-    
     "@radix-ui/react-slider": "latest",
     "@radix-ui/react-switch": "latest",
     "@radix-ui/react-tabs": "latest",
@@ -49,6 +48,7 @@
     "@radix-ui/react-toggle": "latest",
     "@radix-ui/react-toggle-group": "latest",
     "@radix-ui/react-tooltip": "latest",
+    "@yudiel/react-qr-scanner": "^2.0.6",
     "bcryptjs": "latest",
     "class-transformer": "latest",
     "class-validator": "latest",
@@ -93,7 +93,6 @@
     "eslint-config-next": "14.0.4",
     "postcss": "^8.5",
     "tailwindcss": "^3.4.17",
-    "@yudiel/react-qr-scanner": "^2.0.6",
     "typescript": "^5"
   }
 }
