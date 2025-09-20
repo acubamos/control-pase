@@ -6,7 +6,9 @@ import { Camera, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { parseQRData, type QRData } from "@/lib/qr-scanner"
 
-const QrReader = dynamic(() => import("react-qr-reader"), { ssr: false })
+const QrReader = dynamic(() => import("react-qr-reader"), {
+  ssr: false,
+});
 
 interface QRScannerProps {
   onScan: (data: QRData) => void
