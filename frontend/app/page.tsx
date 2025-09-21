@@ -768,13 +768,13 @@ export default function VehicleEntrySystem() {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button
+                          {/* <Button
                             onClick={() => handleDeleteClick(entry.id)}
                             variant="outline"
                             size="sm"
                           >
                             <Trash2 className="h-4 w-4" />
-                          </Button>
+                          </Button> */}
                         </div>
                       </div>
 

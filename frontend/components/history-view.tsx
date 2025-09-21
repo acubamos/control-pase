@@ -36,6 +36,7 @@ import {
   TrendingUp,
   Camera,
   Eye,
+  LogOut,
   Download,
 } from "lucide-react";
 import { UserMenu } from "@/components/user-menu";
@@ -271,6 +272,26 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
   };
 
   const stats = getStatistics();
+  // Función para registrar la salida de un vehículo
+  const handleRegisterExit = async (entryId: string) => {
+    try {
+      const exitTime = getHavanaTime();
+      await apiService.updateEntry(entryId, { fechaSalida: exitTime });
+      
+      toast({
+        title: "Éxito",
+        description: "Salida registrada correctamente",
+      });
+      
+      loadEntries();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo registrar la salida",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -407,17 +428,6 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
 
                 <ExportMenu entries={filteredEntries} />
 
-                {selectedEntries.length > 0 && (
-                  <Button
-                    onClick={handleDeleteSelected}
-                    variant="destructive"
-                    size="sm"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Eliminar ({selectedEntries.length})
-                  </Button>
-                )}
-
                 {/* {user?.permissions.canManualCleanup && (
                   <Button onClick={handleManualCleanup} variant="outline" size="sm">
                     Limpieza Manual
@@ -482,7 +492,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                         <SelectItem value="Camión">Camión</SelectItem>
                         <SelectItem value="Camioneta">Camioneta</SelectItem>
                         <SelectItem value="Bus">Bus</SelectItem>
-                        <SelectItem value="Bicicleta">Bicicleta</SelectItem>
+                        <SelectItem value="Bicicleta">N/A</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -652,6 +662,21 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                         </span>
                       )}
                     </div>
+
+                    {/* Botón para registrar salida */}
+                    {!entry.fechaSalida && (
+                        <div className="pt-2">
+                          <Button
+                            onClick={() => handleRegisterExit(entry.id)}
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                          >
+                            <LogOut className="h-4 w-4 mr-2" />
+                            Registrar Salida
+                          </Button>
+                        </div>
+                      )}
 
                     {entry.photoUrl && (
                       <div className="mt-2 flex items-center gap-2">
