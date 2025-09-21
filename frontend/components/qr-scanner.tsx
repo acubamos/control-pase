@@ -34,7 +34,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       setDetected(false)
 
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment", width: { ideal: TARGET_W }, height: { ideal: TARGET_H } },
+        video: { facingMode: "environment"},
       })
 
       streamRef.current = stream
