@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Camera, X } from "lucide-react"
 import { parseQRData, type QRData } from "@/lib/qr-scanner"
+import jsQR from "jsqr"
 
 interface QRScannerProps {
   onScan: (data: QRData) => void
@@ -15,17 +16,11 @@ interface QRScannerProps {
 export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   const [isScanning, setIsScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [detected, setDetected] = useState(false)
-
+  const [detected, setDetected] = useState(false) // Nueva bandera para UX
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
   const animationFrameRef = useRef<number | null>(null)
-  const workerRef = useRef<Worker | null>(null)
-  const lastScanTimeRef = useRef<number>(0)
-
-  const TARGET_W = 480
-  const TARGET_H = 360
-  const SCAN_INTERVAL = 80 // ms (~12fps)
 
   const startCamera = async () => {
     try {
@@ -34,44 +29,18 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       setDetected(false)
 
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment"},
+        video: {
+          facingMode: "environment",
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
       })
 
       streamRef.current = stream
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         await videoRef.current.play()
-      }
-
-      // Crear worker y OffscreenCanvas
-      const worker = new Worker("qr-worker.js")
-      workerRef.current = worker
-
-      const canvas = new OffscreenCanvas(TARGET_W, TARGET_H)
-      worker.postMessage({ canvas, width: TARGET_W, height: TARGET_H }, [canvas])
-
-      const ctx = canvas.getContext("2d")
-
-      worker.onmessage = (e) => {
-        if (e.data?.success && e.data?.data) {
-          const qrData = parseQRData(e.data.data)
-          if (qrData) {
-            setDetected(true)
-            onScan(qrData)
-            stopCamera()
-            setTimeout(() => handleClose(), 300)
-          }
-        }
-      }
-
-      // Bucle de escaneo
-      const scanLoop = (timestamp: number) => {
-        if (timestamp - lastScanTimeRef.current >= SCAN_INTERVAL && ctx && videoRef.current) {
-          lastScanTimeRef.current = timestamp
-          ctx.drawImage(videoRef.current, 0, 0, TARGET_W, TARGET_H)
-          worker.postMessage("scan")
-        }
-        animationFrameRef.current = requestAnimationFrame(scanLoop)
       }
 
       animationFrameRef.current = requestAnimationFrame(scanLoop)
@@ -86,18 +55,53 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       streamRef.current.getTracks().forEach((track) => track.stop())
       streamRef.current = null
     }
+
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current)
       animationFrameRef.current = null
     }
-    if (videoRef.current) videoRef.current.srcObject = null
-    if (workerRef.current) {
-      workerRef.current.terminate()
-      workerRef.current = null
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null
     }
 
     setIsScanning(false)
     setDetected(false)
+  }
+
+  const scanLoop = () => {
+    scanFrame()
+    animationFrameRef.current = requestAnimationFrame(scanLoop)
+  }
+
+  const scanFrame = () => {
+    if (!videoRef.current || !canvasRef.current || detected) return
+
+    const video = videoRef.current
+    const canvas = canvasRef.current
+    const context = canvas.getContext("2d", { willReadFrequently: true })
+
+    if (!context || video.readyState !== video.HAVE_ENOUGH_DATA) return
+
+    canvas.width = video.videoWidth
+    canvas.height = video.videoHeight
+    context.drawImage(video, 0, 0, canvas.width, canvas.height)
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+      inversionAttempts: "dontInvert",
+    })
+
+    if (code) {
+      const qrData = parseQRData(code.data)
+      if (qrData) {
+        setDetected(true) // Activar animación de confirmación
+        onScan(qrData)
+        // Esperar 1 segundo antes de cerrar
+        setTimeout(() => {
+          handleClose()
+        },)
+      }
+    }
   }
 
   const handleClose = () => {
@@ -111,14 +115,22 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     if (qrData) {
       setDetected(true)
       onScan(qrData)
-      setTimeout(() => handleClose(), 500)
+      setTimeout(() => {
+        handleClose()
+      }, 1000)
     }
   }
 
   useEffect(() => {
-    if (isOpen) startCamera()
-    else stopCamera()
-    return () => stopCamera()
+    if (isOpen) {
+      startCamera()
+    } else {
+      stopCamera()
+    }
+
+    return () => {
+      stopCamera()
+    }
   }, [isOpen])
 
   return (
@@ -135,7 +147,9 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
           {error ? (
             <div className="text-center py-8">
               <p className="text-red-600 mb-4">{error}</p>
-              <Button onClick={startCamera} variant="outline">Intentar de nuevo</Button>
+              <Button onClick={startCamera} variant="outline">
+                Intentar de nuevo
+              </Button>
             </div>
           ) : (
             <div className="relative">
@@ -145,11 +159,15 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
                 playsInline 
                 muted 
               />
+              <canvas ref={canvasRef} className="hidden" />
+
               {isScanning && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div
                     className={`border-2 w-48 h-48 rounded-lg ${
-                      detected ? "border-green-500 animate-ping" : "border-green-500 border-dashed animate-pulse"
+                      detected
+                        ? "border-green-500 animate-ping" // Animación cuando detecta
+                        : "border-green-500 border-dashed animate-pulse"
                     }`}
                   />
                 </div>
@@ -167,7 +185,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
           </div>
 
           <p className="text-sm text-gray-600 text-center">
-            Apunta la cámara hacia el código QR. Iluminación adecuada acelera la detección.
+            Apunta la cámara hacia el código QR de la cédula. Asegúrate de tener buena iluminación.
           </p>
         </div>
       </DialogContent>
