@@ -99,7 +99,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         // Esperar 1 segundo antes de cerrar
         setTimeout(() => {
           handleClose()
-        }, 1000)
+        },)
       }
     }
   }
