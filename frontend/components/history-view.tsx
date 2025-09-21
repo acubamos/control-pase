@@ -292,6 +292,25 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
       });
     }
   };
+  function getHavanaTime(): string {
+    const now = new Date();
+    
+    // Obtener la hora de La Habana correctamente
+    const havanaTimeStr = now.toLocaleString("en-US", {
+      timeZone: "America/Havana"
+    });
+    
+    const havanaTime = new Date(havanaTimeStr);
+    
+    // Formatear manualmente para mantener la zona horaria
+    const year = havanaTime.getFullYear();
+    const month = String(havanaTime.getMonth() + 1).padStart(2, '0');
+    const day = String(havanaTime.getDate()).padStart(2, '0');
+    const hours = String(havanaTime.getHours()).padStart(2, '0');
+    const minutes = String(havanaTime.getMinutes()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  }
 
   if (isLoading) {
     return (
@@ -694,7 +713,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleViewPhoto(entry.photoUrl)}
+                            onClick={() => handleViewPhoto(entry.photoUrl ?? "")}
                             title="Ver foto"
                           >
                             <Eye className="h-4 w-4" />

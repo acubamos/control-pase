@@ -158,7 +158,7 @@ export default function VehicleEntrySystem() {
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(getCurrentHavanaTime12h());
-    }, 60000);
+    }, 2000);
 
     return () => clearInterval(timer);
   }, []);
@@ -192,8 +192,28 @@ export default function VehicleEntrySystem() {
   const loadEntries = async () => {
     try {
       const data = await apiService.getEntries();
-      // Mostrar solo las últimas 10 entradas en la vista principal
-      setEntries(data.slice(0, 10));
+  
+      // Obtener fecha actual en La Habana (YYYY-MM-DD)
+      const nowHavanaStr = getHavanaTime(); // → "2025-09-21T04:15"
+      const todayStr = nowHavanaStr.split("T")[0]; // "2025-09-21"
+  
+      // Filtrar solo entradas creadas hoy en La Habana
+      const todayEntries = data.filter((entry: any) => {
+        if (!entry.createdAt) return false;
+  
+        // Convertir createdAt (UTC) a hora de La Habana
+        const entryUtc = new Date(entry.createdAt);
+        const entryHavanaStr = entryUtc.toLocaleString("en-US", {
+          timeZone: "America/Havana",
+        });
+        const entryHavanaDate = new Date(entryHavanaStr);
+        const entryDateStr = entryHavanaDate.toISOString().split("T")[0];
+  
+        return entryDateStr === todayStr;
+      });
+  
+      // Mostrar solo las últimas 10 entradas de hoy
+      setEntries(todayEntries.slice(0, 100));
     } catch (error) {
       toast({
         title: "Error",
@@ -202,6 +222,7 @@ export default function VehicleEntrySystem() {
       });
     }
   };
+  
 
   const handleLoginSuccess = () => {
     setIsAuthenticated(true);
@@ -846,7 +867,7 @@ export default function VehicleEntrySystem() {
                           src={entry.photoUrl || "/placeholder.svg"}
                           alt="Foto de la entrada"
                           className="w-16 h-16 object-cover rounded border cursor-pointer"
-                          onClick={() => handleViewPhoto(entry.photoUrl)}
+                          onClick={() => handleViewPhoto(entry.photoUrl ?? "")}
                           onError={(e) => {
                             (e.target as HTMLImageElement).src =
                               "/placeholder.svg";
