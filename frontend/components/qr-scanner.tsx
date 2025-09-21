@@ -19,46 +19,13 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
   const animationFrameRef = useRef<number | null>(null)
   const workerRef = useRef<Worker | null>(null)
   const lastScanTimeRef = useRef<number>(0)
-  const SCAN_INTERVAL = 150 // ms (~12 fps)
+
   const TARGET_W = 480
   const TARGET_H = 360
-
-  // Crear worker como Blob (inline)
-  const createWorker = () => {
-    if (workerRef.current) return
-
-    const workerCode = `
-      // Importar jsQR desde un CDN UMD
-      self.importScripts('https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js');
-
-      self.onmessage = function(e) {
-        // e.data: { width, height, buffer }
-        try {
-          const { width, height, buffer } = e.data;
-          // Reconstruir Uint8ClampedArray a partir del buffer transferido
-          const clamped = new Uint8ClampedArray(buffer);
-          // Ejecutar jsQR (la librería queda disponible como jsQR en el scope global)
-          const code = self.jsQR(clamped, width, height, { inversionAttempts: "dontInvert" });
-          if (code) {
-            // Devolver el texto detectado
-            self.postMessage({ success: true, data: code.data });
-          } else {
-            self.postMessage({ success: false });
-          }
-        } catch (err) {
-          self.postMessage({ success: false, error: String(err) });
-        }
-      };
-    `
-    const blob = new Blob([workerCode], { type: "application/javascript" })
-    const url = URL.createObjectURL(blob)
-    const worker = new Worker(url)
-    workerRef.current = worker
-  }
+  const SCAN_INTERVAL = 80 // ms (~12fps)
 
   const startCamera = async () => {
     try {
@@ -66,39 +33,45 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       setIsScanning(true)
       setDetected(false)
 
-      createWorker()
-
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "environment",
-          width: { ideal: TARGET_W },
-          height: { ideal: TARGET_H },
-        },
+        video: { facingMode: "environment", width: { ideal: TARGET_W }, height: { ideal: TARGET_H } },
       })
 
       streamRef.current = stream
-
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         await videoRef.current.play()
       }
 
-      // Listener del worker
-      if (workerRef.current) {
-        workerRef.current.onmessage = (ev) => {
-          if (!ev.data) return
-          if (ev.data.success && ev.data.data) {
-            const text = ev.data.data as string
-            const qrData = parseQRData(text)
-            if (qrData) {
-              setDetected(true)
-              onScan(qrData)
-              // detener inmediatamente
-              stopCamera()
-              setTimeout(() => handleClose(), 300)
-            }
+      // Crear worker y OffscreenCanvas
+      const worker = new Worker("qr-worker.js")
+      workerRef.current = worker
+
+      const canvas = new OffscreenCanvas(TARGET_W, TARGET_H)
+      worker.postMessage({ canvas, width: TARGET_W, height: TARGET_H }, [canvas])
+
+      const ctx = canvas.getContext("2d")
+
+      worker.onmessage = (e) => {
+        if (e.data?.success && e.data?.data) {
+          const qrData = parseQRData(e.data.data)
+          if (qrData) {
+            setDetected(true)
+            onScan(qrData)
+            stopCamera()
+            setTimeout(() => handleClose(), 300)
           }
         }
+      }
+
+      // Bucle de escaneo
+      const scanLoop = (timestamp: number) => {
+        if (timestamp - lastScanTimeRef.current >= SCAN_INTERVAL && ctx && videoRef.current) {
+          lastScanTimeRef.current = timestamp
+          ctx.drawImage(videoRef.current, 0, 0, TARGET_W, TARGET_H)
+          worker.postMessage("scan")
+        }
+        animationFrameRef.current = requestAnimationFrame(scanLoop)
       }
 
       animationFrameRef.current = requestAnimationFrame(scanLoop)
@@ -118,8 +91,6 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       animationFrameRef.current = null
     }
     if (videoRef.current) videoRef.current.srcObject = null
-
-    // Terminar worker y liberar url
     if (workerRef.current) {
       workerRef.current.terminate()
       workerRef.current = null
@@ -127,41 +98,6 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
 
     setIsScanning(false)
     setDetected(false)
-  }
-
-  const scanLoop = (timestamp: number) => {
-    if (timestamp - lastScanTimeRef.current >= SCAN_INTERVAL) {
-      lastScanTimeRef.current = timestamp
-      scanFrameAndSendToWorker()
-    }
-    animationFrameRef.current = requestAnimationFrame(scanLoop)
-  }
-
-  const scanFrameAndSendToWorker = () => {
-    if (!videoRef.current || !canvasRef.current || !workerRef.current || detected) return
-
-    const video = videoRef.current
-    const canvas = canvasRef.current
-    const ctx = canvas.getContext("2d", { willReadFrequently: true })
-    if (!ctx || video.readyState !== video.HAVE_ENOUGH_DATA) return
-
-    // Redimensionamos el canvas a un tamaño fijo reducido
-    canvas.width = TARGET_W
-    canvas.height = TARGET_H
-    ctx.drawImage(video, 0, 0, TARGET_W, TARGET_H)
-
-    const imageData = ctx.getImageData(0, 0, TARGET_W, TARGET_H)
-    // Transferimos el buffer (mejor rendimiento)
-    // jsQR espera Uint8ClampedArray; transferimos el buffer del array subyacente
-    const buffer = new Uint8ClampedArray(imageData.data).buffer
-
-    // postMessage con transferable
-    try {
-      workerRef.current.postMessage({ width: TARGET_W, height: TARGET_H, buffer }, [buffer])
-    } catch (err) {
-      // Fallback: si no puede transferir, envía copia normal
-      workerRef.current.postMessage({ width: TARGET_W, height: TARGET_H, buffer: imageData.data })
-    }
   }
 
   const handleClose = () => {
@@ -183,7 +119,6 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     if (isOpen) startCamera()
     else stopCamera()
     return () => stopCamera()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
 
   return (
@@ -210,7 +145,6 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
                 playsInline 
                 muted 
               />
-              <canvas ref={canvasRef} className="hidden" />
               {isScanning && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div
