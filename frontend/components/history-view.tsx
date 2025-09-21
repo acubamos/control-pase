@@ -189,31 +189,6 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
       });
     }
   };
-
-  const handleManualCleanup = async () => {
-    if (
-      !confirm(
-        "¿Estás seguro de que quieres realizar una limpieza manual? Esto eliminará entradas según las reglas configuradas."
-      )
-    )
-      return;
-
-    try {
-      const result = await authService.manualCleanup();
-      toast({
-        title: "Limpieza completada",
-        description: `${result.deletedCount} entradas eliminadas`,
-      });
-      loadEntries();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Error al realizar la limpieza",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handlePhotoCapture = (entryId: string) => {
     setSelectedEntryForPhoto(entryId);
     setShowPhotoCapture(true);
@@ -444,14 +419,13 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                   <Filter className="h-4 w-4 mr-2" />
                   Filtros
                 </Button>
-
-                <ExportMenu entries={filteredEntries} />
-
-                {/* {user?.permissions.canManualCleanup && (
-                  <Button onClick={handleManualCleanup} variant="outline" size="sm">
-                    Limpieza Manual
+                {selectedEntries.length > 0 && (
+                  <Button onClick={handleDeleteSelected} variant="destructive" size="sm">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Eliminar ({selectedEntries.length})
                   </Button>
-                )} */}
+                )}
+                <ExportMenu entries={filteredEntries} />
               </div>
             </div>
 
