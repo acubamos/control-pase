@@ -23,7 +23,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   const animationFrameRef = useRef<number | null>(null)
   const workerRef = useRef<Worker | null>(null)
   const lastScanTimeRef = useRef<number>(0)
-  const SCAN_INTERVAL = 80 // ms (~12 fps)
+  const SCAN_INTERVAL = 150 // ms (~12 fps)
   const TARGET_W = 480
   const TARGET_H = 360
 
