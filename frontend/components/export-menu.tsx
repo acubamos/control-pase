@@ -27,7 +27,6 @@ export function ExportMenu({ entries }: ExportMenuProps) {
       "Apellidos",
       "CI",
       "Tipo Vehículo",
-      "Chapa",
       "Fecha Entrada",
       "Lugar Destino",
       "Fecha Salida",
@@ -42,8 +41,7 @@ export function ExportMenu({ entries }: ExportMenuProps) {
           `"${entry.nombre}"`,
           `"${entry.apellidos}"`,
           entry.ci,
-          `"${entry.tipoVehiculo.join("; ")}"`,
-          entry.chapa,
+          `"${entry.tipoVehiculo.join("; ")}"`,         
           entry.fechaEntrada,
           `"${Object.entries(entry.lugarDestino)
             .map(([lugar, sublugares]) => `${lugar}: ${sublugares.join(", ")}`)
@@ -123,8 +121,7 @@ export function ExportMenu({ entries }: ExportMenuProps) {
               <th>Nombre</th>
               <th>Apellidos</th>
               <th>CI</th>
-              <th>Tipo Vehículo</th>
-              <th>Chapa</th>
+              <th>Tipo Vehículo</th>              
               <th>Fecha Entrada</th>
               <th>Lugar Destino</th>
               <th>Fecha Salida</th>
@@ -138,8 +135,7 @@ export function ExportMenu({ entries }: ExportMenuProps) {
                 <td>${entry.nombre}</td>
                 <td>${entry.apellidos}</td>
                 <td>${entry.ci}</td>
-                <td>${entry.tipoVehiculo.join("; ")}</td>
-                <td>${entry.chapa}</td>
+                <td>${entry.tipoVehiculo.join("; ")}</td>              
                 <td>${entry.fechaEntrada}</td>
                 <td>${Object.entries(entry.lugarDestino)
                   .map(([lugar, sublugares]) => `${lugar}: ${sublugares.join(", ")}`)
@@ -186,7 +182,6 @@ Nombre: ${entry.nombre}
 Apellidos: ${entry.apellidos}
 CI: ${entry.ci}
 Tipo Vehículo: ${entry.tipoVehiculo.join("; ")}
-Chapa: ${entry.chapa}
 Fecha Entrada: ${entry.fechaEntrada}
 Lugar Destino: ${Object.entries(entry.lugarDestino)
   .map(([lugar, sublugares]) => `${lugar}: ${sublugares.join(", ")}`)
@@ -293,11 +288,10 @@ Fecha Creación: ${entry.createdAt}
           th:nth-child(3), td:nth-child(3) { width: 10%; } /* Apellidos */
           th:nth-child(4), td:nth-child(4) { width: 8%; } /* CI */
           th:nth-child(5), td:nth-child(5) { width: 10%; } /* Tipo Vehículo */
-          th:nth-child(6), td:nth-child(6) { width: 8%; } /* Chapa */
-          th:nth-child(7), td:nth-child(7) { width: 10%; } /* Fecha Entrada */
-          th:nth-child(8), td:nth-child(8) { width: 15%; } /* Lugar Destino */
-          th:nth-child(9), td:nth-child(9) { width: 10%; } /* Fecha Salida */
-          th:nth-child(10), td:nth-child(10) { width: 12%; } /* Fecha Creación */
+          th:nth-child(6), td:nth-child(6) { width: 10%; } /* Fecha Entrada */
+          th:nth-child(7), td:nth-child(7) { width: 15%; } /* Lugar Destino */
+          th:nth-child(8), td:nth-child(8) { width: 10%; } /* Fecha Salida */
+          th:nth-child(9), td:nth-child(9) { width: 12%; } /* Fecha Creación */
         </style>
       </head>
       <body>
@@ -313,8 +307,7 @@ Fecha Creación: ${entry.createdAt}
                   <th>Nombre</th>
                   <th>Apellidos</th>
                   <th>CI</th>
-                  <th>Tipo Vehículo</th>
-                  <th>Chapa</th>
+                  <th>Tipo Vehículo</th>                 
                   <th>Fecha Entrada</th>
                   <th>Lugar Destino</th>
                   <th>Fecha Salida</th>
@@ -328,8 +321,7 @@ Fecha Creación: ${entry.createdAt}
                     <td>${entry.nombre}</td>
                     <td>${entry.apellidos}</td>
                     <td>${entry.ci}</td>
-                    <td>${entry.tipoVehiculo.join("; ")}</td>
-                    <td>${entry.chapa}</td>
+                    <td>${entry.tipoVehiculo.join("; ")}</td>                   
                     <td>${entry.fechaEntrada}</td>
                     <td>${Object.entries(entry.lugarDestino)
                       .map(([lugar, sublugares]) => `${lugar}: ${sublugares.join(", ")}`)

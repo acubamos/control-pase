@@ -8,7 +8,6 @@ export interface VehicleEntry {
   apellidos: string
   ci: string
   tipoVehiculo: string[]
-  chapa: string
   fechaEntrada: string
   lugarDestino: { [lugar: string]: string[] }
   fechaSalida?: string | null
@@ -22,7 +21,6 @@ export interface CreateVehicleEntry {
   apellidos: string
   ci: string
   tipoVehiculo: string[]
-  chapa: string
   fechaEntrada: string
   lugarDestino: { [lugar: string]: string[] }
   fechaSalida?: string | null
@@ -34,7 +32,6 @@ export interface UpdateVehicleEntry {
   apellidos?: string
   ci?: string
   tipoVehiculo?: string[]
-  chapa?: string
   fechaEntrada?: string
   lugarDestino?: { [lugar: string]: string[] }
   fechaSalida?: string | null

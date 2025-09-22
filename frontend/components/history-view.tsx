@@ -111,8 +111,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
         (entry) =>
           entry.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
           entry.apellidos.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          entry.ci.includes(searchTerm) ||
-          entry.chapa.toLowerCase().includes(searchTerm.toLowerCase())
+          entry.ci.includes(searchTerm)         
       );
     }
 
@@ -396,19 +395,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
         <Card className="mb-6">
           <CardContent className="p-6">
             <div className="flex flex-col lg:flex-row gap-4">
-              {/* Búsqueda */}
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    placeholder="Buscar por nombre, CI o chapa..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-
+              {/* Búsqueda */}             
               {/* Botones de acción */}
               <div className="flex gap-2">
                 <Button
@@ -622,10 +609,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                             {tipo}
                           </Badge>
                         ))}
-                      </div>
-                      <span className="text-sm text-gray-600">
-                        - {entry.chapa}
-                      </span>
+                      </div>                     
                     </div>
 
                     <div className="flex items-center gap-2">

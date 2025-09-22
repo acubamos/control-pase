@@ -16,11 +16,7 @@ export class CreateEntryDto {
   @IsArray()
   @IsString({ each: true })
   tipoVehiculo: string[]
-
-  @IsString()
-  @IsNotEmpty()
-  chapa: string
-
+  
   @IsDateString()
   fechaEntrada: string
 

@@ -135,7 +135,6 @@ export default function VehicleEntrySystem() {
     apellidos: "",
     ci: "",
     tipoVehiculo: [],
-    chapa: "",
     fechaEntrada: "",
     lugarDestino: {},
     fechaSalida: "",
@@ -292,7 +291,6 @@ export default function VehicleEntrySystem() {
       apellidos: "",
       ci: "",
       tipoVehiculo: [],
-      chapa: "",
       fechaEntrada: getHavanaTime(),
       lugarDestino: {},
       fechaSalida: "",
@@ -389,7 +387,6 @@ export default function VehicleEntrySystem() {
       apellidos: entry.apellidos,
       ci: entry.ci,
       tipoVehiculo: entry.tipoVehiculo,
-      chapa: entry.chapa,
       fechaEntrada: entry.fechaEntrada,
       lugarDestino: entry.lugarDestino,
       fechaSalida: entry.fechaSalida || "",
@@ -625,21 +622,7 @@ export default function VehicleEntrySystem() {
                       ))}
                     </div>
                   </div>
-
-                  <div>
-                    <Label htmlFor="chapa">Chapa/Placa</Label>
-                    <Input
-                      id="chapa"
-                      value={formData.chapa}
-                      onChange={(e) =>
-                        setFormData((prev) => ({
-                          ...prev,
-                          chapa: e.target.value,
-                        }))
-                      }
-                      required
-                    />
-                  </div>
+                  
                 </div>
 
                 <Separator />
@@ -811,10 +794,7 @@ export default function VehicleEntrySystem() {
                               {tipo}
                             </Badge>
                           ))}
-                        </div>
-                        <span className="text-sm text-gray-600">
-                          - {entry.chapa}
-                        </span>
+                        </div>                        
                       </div>
 
                       <div className="flex items-center gap-2">

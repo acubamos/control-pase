@@ -18,9 +18,6 @@ export class VehicleEntry {
   tipoVehiculo: string[]
 
   @Column()
-  chapa: string
-
-  @Column()
   fechaEntrada: string
 
   @Column("json")
