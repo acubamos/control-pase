@@ -37,7 +37,7 @@ import {
 import { LoginForm } from "@/components/login-form";
 import { UserMenu } from "@/components/user-menu";
 import { HistoryView } from "@/components/history-view";
-import { QRScanner }  from "@/components/qr-scanner";
+import { QRScanner } from "@/components/qr-scanner";
 import { PhotoCapture } from "@/components/photo-capture";
 import { authService } from "@/lib/auth-service";
 import {
@@ -47,42 +47,44 @@ import {
 } from "@/lib/api-services";
 import type { QRData } from "@/lib/qr-scanner";
 
-const VEHICLE_TYPES = [
-  "Carro",
-  "Moto",
-  "Camión",
-  "Camioneta",
-  "Bus",
-  "N/A",
-];
+const VEHICLE_TYPES = ["Carro", "Moto", "Camión", "Camioneta", "Bus", "N/A"];
 
 const LOCATIONS = {
-  "Entidades": ["Acubamos SURL", "Supergigantes", "Agencia de Paquetería", "Etecsa","Azumat OC", "Azumat UEB SG"],
+  Entidades: [
+    "Acubamos SURL",
+    "Supergigantes",
+    "Agencia de Paquetería",
+    "Etecsa",
+    "Azumat OC",
+    "Azumat UEB SG",
+  ],
 };
 
 // 1. Función para obtener hora de La Habana en formato ISO (corregida)
 function getHavanaTime(): string {
   const now = new Date();
-  
+
   // Obtener la hora actual en La Habana considerando UTC-4 o UTC-5
-  const havanaTime = new Date(now.toLocaleString("en-US", {
-    timeZone: "America/Havana"
-  }));
-  
+  const havanaTime = new Date(
+    now.toLocaleString("en-US", {
+      timeZone: "America/Havana",
+    })
+  );
+
   // Ajustar el formato para datetime-local (YYYY-MM-DDTHH:MM)
   const year = havanaTime.getFullYear();
-  const month = String(havanaTime.getMonth() + 1).padStart(2, '0');
-  const day = String(havanaTime.getDate()).padStart(2, '0');
-  const hours = String(havanaTime.getHours()).padStart(2, '0');
-  const minutes = String(havanaTime.getMinutes()).padStart(2, '0');
-  
+  const month = String(havanaTime.getMonth() + 1).padStart(2, "0");
+  const day = String(havanaTime.getDate()).padStart(2, "0");
+  const hours = String(havanaTime.getHours()).padStart(2, "0");
+  const minutes = String(havanaTime.getMinutes()).padStart(2, "0");
+
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
 // 2. Función para formatear fecha y hora en formato 12h (AM/PM) - YA CORRECTA
 function formatDateTimeTo12h(dateString: string): string {
   const date = new Date(dateString);
-  
+
   return date.toLocaleString("es-ES", {
     timeZone: "America/Havana",
     year: "numeric",
@@ -90,30 +92,30 @@ function formatDateTimeTo12h(dateString: string): string {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-    hour12: true
+    hour12: true,
   });
 }
 
 // 3. Función para obtener la hora actual de La Habana en formato 12h - YA CORRECTA
 function getCurrentHavanaTime12h(): string {
   const now = new Date();
-  
+
   return now.toLocaleString("es-ES", {
     timeZone: "America/Havana",
     hour: "2-digit",
     minute: "2-digit",
-    hour12: true
+    hour12: true,
   });
 }
 
 // 4. Función alternativa más confiable para hora ISO
 function getHavanaTimeISO(): string {
   const now = new Date();
-  
+
   // Ajustar considerando el offset de Cuba (UTC-4 o UTC-5)
   const cubaOffset = -4 * 60 * 60 * 1000; // UTC-4 como predeterminado (horario de verano)
   const havanaTime = new Date(now.getTime() + cubaOffset);
-  
+
   return havanaTime.toISOString().slice(0, 16);
 }
 
@@ -125,7 +127,9 @@ export default function VehicleEntrySystem() {
   const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [currentTime, setCurrentTime] = useState<string>(getCurrentHavanaTime12h());
+  const [currentTime, setCurrentTime] = useState<string>(
+    getCurrentHavanaTime12h()
+  );
 
   // Estados del formulario
   const [formData, setFormData] = useState<CreateVehicleEntry>({
@@ -189,34 +193,42 @@ export default function VehicleEntrySystem() {
   const loadEntries = async () => {
     try {
       const data = await apiService.getEntries();
-  
+
       // Obtener fecha actual en La Habana (YYYY-MM-DD)
-      const nowHavana = new Date(new Date().toLocaleString("en-US", {
-        timeZone: "America/Havana"
-      }));
-      const todayStr = nowHavana.toISOString().split('T')[0];
-  
+      const nowHavana = new Date(
+        new Date().toLocaleString("en-US", {
+          timeZone: "America/Havana",
+        })
+      );
+      const todayStr = nowHavana.toISOString().split("T")[0];
+
       // Filtrar solo entradas creadas hoy en La Habana
       const todayEntries = data.filter((entry: any) => {
         if (!entry.createdAt) return false;
-        
+
         try {
           // Convertir createdAt a fecha en zona horaria de La Habana
           const entryDate = new Date(entry.createdAt);
-          const entryHavana = new Date(entryDate.toLocaleString("en-US", {
-            timeZone: "America/Havana"
-          }));
-          const entryDateStr = entryHavana.toISOString().split('T')[0];
-          
+          const entryHavana = new Date(
+            entryDate.toLocaleString("en-US", {
+              timeZone: "America/Havana",
+            })
+          );
+          const entryDateStr = entryHavana.toISOString().split("T")[0];
+
           return entryDateStr === todayStr;
         } catch (error) {
           console.error("Error procesando fecha:", error);
           return false;
         }
       });
-  
+
       // Mostrar solo las últimas 100 entradas de hoy
       setEntries(todayEntries.slice(0, 100));
+      // En loadEntries, agrega esto para debugging:
+      console.log("Total entries:", data.length);
+      console.log("Today's date (Havana):", todayStr);
+      console.log("Filtered entries:", todayEntries.length);
     } catch (error) {
       console.error("Error loading entries:", error);
       toast({
@@ -224,12 +236,8 @@ export default function VehicleEntrySystem() {
         description: "No se pudieron cargar las entradas",
         variant: "destructive",
       });
-      
-      // Mostrar todas las entradas como fallback
-      setEntries(data.slice(0, 100));
     }
   };
-  
 
   const handleLoginSuccess = () => {
     setIsAuthenticated(true);
@@ -311,12 +319,12 @@ export default function VehicleEntrySystem() {
     try {
       const exitTime = getHavanaTime();
       await apiService.updateEntry(entryId, { fechaSalida: exitTime });
-      
+
       toast({
         title: "Éxito",
         description: "Salida registrada correctamente",
       });
-      
+
       loadEntries();
     } catch (error) {
       toast({
@@ -513,7 +521,7 @@ export default function VehicleEntrySystem() {
             <div>
               <h1 className="text-xl font-semibold text-gray-900">
                 Sistema de Gestión de Entradas
-              </h1>             
+              </h1>
             </div>
             <div className="flex items-center gap-4">
               <Button
@@ -548,7 +556,7 @@ export default function VehicleEntrySystem() {
                     <h3 className="text-sm font-medium text-gray-900">
                       Datos Personales
                     </h3>
-                     <Button
+                    <Button
                       type="button"
                       onClick={() => setShowQRScanner(true)}
                       variant="outline"
@@ -629,7 +637,7 @@ export default function VehicleEntrySystem() {
                         </div>
                       ))}
                     </div>
-                  </div>                 
+                  </div>
                 </div>
 
                 <Separator />
@@ -696,10 +704,9 @@ export default function VehicleEntrySystem() {
                         }
                         required
                         disabled
-                      />                     
+                      />
                     </div>
-                    <div>                      
-                    </div>
+                    <div></div>
                   </div>
                 </div>
 
@@ -778,7 +785,7 @@ export default function VehicleEntrySystem() {
                             size="sm"
                           >
                             <Edit className="h-4 w-4" />
-                          </Button>                          
+                          </Button>
                         </div>
                       </div>
 
@@ -794,7 +801,7 @@ export default function VehicleEntrySystem() {
                               {tipo}
                             </Badge>
                           ))}
-                        </div>                      
+                        </div>
                       </div>
 
                       <div className="flex items-center gap-2">
@@ -947,11 +954,11 @@ export default function VehicleEntrySystem() {
       )}
 
       <Toaster />
-       <footer className="bg-blue-800 text-white py-4">
-      <div className="container mx-auto px-4 text-center">
-        <p>© 2025 Acubamos SURL. Todos los derechos reservados.</p>
-      </div>
-    </footer>
+      <footer className="bg-blue-800 text-white py-4">
+        <div className="container mx-auto px-4 text-center">
+          <p>© 2025 Acubamos SURL. Todos los derechos reservados.</p>
+        </div>
+      </footer>
     </div>
   );
 }
