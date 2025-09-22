@@ -406,12 +406,12 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                   <Filter className="h-4 w-4 mr-2" />
                   Filtros
                 </Button>
-                {selectedEntries.length > 0 && (
+                {/* {selectedEntries.length > 0 && (
                   <Button onClick={handleDeleteSelected} variant="destructive" size="sm">
                     <Trash2 className="h-4 w-4 mr-2" />
                     Eliminar ({selectedEntries.length})
                   </Button>
-                )}
+                )} */}
                 <ExportMenu entries={filteredEntries} />
               </div>
             </div>
@@ -656,17 +656,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                       )}
 
                     {entry.photoUrl && (
-                      <div className="mt-2 flex items-center gap-2">
-                        {/* <img
-                          src={entry.photoUrl || "/placeholder.svg"}
-                          alt="Foto de la entrada"
-                          className="w-16 h-16 object-cover rounded border cursor-pointer"
-                          onClick={() => handleViewPhoto(entry.photoUrl)}
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src =
-                              "/placeholder.svg";
-                          }}
-                        /> */}
+                      <div className="mt-2 flex items-center gap-2">                       
                         <div className="flex gap-1">
                           <Button
                             variant="outline"
