@@ -64,14 +64,12 @@ const LOCATIONS = {
 function getHavanaTime(): string {
   const now = new Date();
   
-  // Obtener la hora de La Habana correctamente
-  const havanaTimeStr = now.toLocaleString("en-US", {
+  // Obtener la hora actual en La Habana considerando UTC-4 o UTC-5
+  const havanaTime = new Date(now.toLocaleString("en-US", {
     timeZone: "America/Havana"
-  });
+  }));
   
-  const havanaTime = new Date(havanaTimeStr);
-  
-  // Formatear manualmente para mantener la zona horaria
+  // Ajustar el formato para datetime-local (YYYY-MM-DDTHH:MM)
   const year = havanaTime.getFullYear();
   const month = String(havanaTime.getMonth() + 1).padStart(2, '0');
   const day = String(havanaTime.getDate()).padStart(2, '0');
@@ -193,32 +191,42 @@ export default function VehicleEntrySystem() {
       const data = await apiService.getEntries();
   
       // Obtener fecha actual en La Habana (YYYY-MM-DD)
-      const nowHavanaStr = getHavanaTime(); // → "2025-09-21T04:15"
-      const todayStr = nowHavanaStr.split("T")[0]; // "2025-09-21"
+      const nowHavana = new Date(new Date().toLocaleString("en-US", {
+        timeZone: "America/Havana"
+      }));
+      const todayStr = nowHavana.toISOString().split('T')[0];
   
       // Filtrar solo entradas creadas hoy en La Habana
       const todayEntries = data.filter((entry: any) => {
         if (!entry.createdAt) return false;
-  
-        // Convertir createdAt (UTC) a hora de La Habana
-        const entryUtc = new Date(entry.createdAt);
-        const entryHavanaStr = entryUtc.toLocaleString("en-US", {
-          timeZone: "America/Havana",
-        });
-        const entryHavanaDate = new Date(entryHavanaStr);
-        const entryDateStr = entryHavanaDate.toISOString().split("T")[0];
-  
-        return entryDateStr === todayStr;
+        
+        try {
+          // Convertir createdAt a fecha en zona horaria de La Habana
+          const entryDate = new Date(entry.createdAt);
+          const entryHavana = new Date(entryDate.toLocaleString("en-US", {
+            timeZone: "America/Havana"
+          }));
+          const entryDateStr = entryHavana.toISOString().split('T')[0];
+          
+          return entryDateStr === todayStr;
+        } catch (error) {
+          console.error("Error procesando fecha:", error);
+          return false;
+        }
       });
   
-      // Mostrar solo las últimas 10 entradas de hoy
+      // Mostrar solo las últimas 100 entradas de hoy
       setEntries(todayEntries.slice(0, 100));
     } catch (error) {
+      console.error("Error loading entries:", error);
       toast({
         title: "Error",
         description: "No se pudieron cargar las entradas",
         variant: "destructive",
       });
+      
+      // Mostrar todas las entradas como fallback
+      setEntries(data.slice(0, 100));
     }
   };
   

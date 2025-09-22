@@ -7,7 +7,6 @@ import { EntriesModule } from "./entries/entries.module"
 import { AuthModule } from "./auth/auth.module"
 import { DatabaseModule } from "./database/database.module"
 import { databaseConfig } from "./config/database.config"
-import { DatabaseCleanupService } from "./database/database-cleanup.service"
 import { AppController } from "./app.controller"
 import { AppService } from "./app.service"
 
