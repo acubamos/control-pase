@@ -108,19 +108,6 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     stopCamera()
     onClose()
   }
-
-  const simulateScan = () => {
-    const mockQRText = `N:HASSAN ALEJANDRO\nA:RODRIGUEZ PEREZ\nCI:99032608049`
-    const qrData = parseQRData(mockQRText)
-    if (qrData) {
-      setDetected(true)
-      onScan(qrData)
-      setTimeout(() => {
-        handleClose()
-      }, 1000)
-    }
-  }
-
   useEffect(() => {
     if (isOpen) {
       startCamera()
@@ -173,19 +160,9 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
                 </div>
               )}
             </div>
-          )}
-
-          <div className="flex gap-2">
-            <Button onClick={simulateScan} className="flex-1" variant="outline">
-              Simular Escaneo (Desarrollo)
-            </Button>
-            <Button onClick={handleClose} variant="outline" size="icon">
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-
+          )}          
           <p className="text-sm text-gray-600 text-center">
-            Apunta la cámara hacia el código QR de la cédula. Asegúrate de tener buena iluminación.
+            Apunta la cámara hacia el código QR del carnet. Asegúrate de tener buena iluminación.
           </p>
         </div>
       </DialogContent>

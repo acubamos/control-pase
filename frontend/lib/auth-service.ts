@@ -104,7 +104,7 @@ class AuthService {
       case "weekly_admin":
         return "Administrador Semanal"
       case "yearly_admin":
-        return "Administrador Anual"
+        return "AZUMAT"
       default:
         return "Usuario"
     }

@@ -52,7 +52,7 @@ export function LoginForm({ onLoginSuccess }: LoginFormProps) {
         "Usuarios por defecto creados:\n\n" +
           "Administrador Diario: daily_admin / password123\n" +
           "Administrador Semanal: weekly_admin / password123\n" +
-          "Administrador Anual: yearly_admin / password123",
+          "AZUMAT: yearly_admin / password123",
       )
     } catch (error) {
       setError("Error al crear usuarios por defecto")

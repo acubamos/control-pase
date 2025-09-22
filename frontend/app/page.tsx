@@ -583,7 +583,7 @@ export default function VehicleEntrySystem() {
                   </div>
 
                   <div>
-                    <Label htmlFor="ci">Cédula de Identidad</Label>
+                    <Label htmlFor="ci">Carnet de Identidad</Label>
                     <Input
                       id="ci"
                       value={formData.ci}
@@ -621,8 +621,7 @@ export default function VehicleEntrySystem() {
                         </div>
                       ))}
                     </div>
-                  </div>
-                  
+                  </div>                 
                 </div>
 
                 <Separator />
@@ -672,7 +671,7 @@ export default function VehicleEntrySystem() {
                 <Separator />
 
                 {/* Fechas */}
-                <div className="space-y-4">
+                <div className="hidden space-y-4">
                   <h3 className="text-sm font-medium text-gray-900">Fechas</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
@@ -771,14 +770,7 @@ export default function VehicleEntrySystem() {
                             size="sm"
                           >
                             <Edit className="h-4 w-4" />
-                          </Button>
-                          {/* <Button
-                            onClick={() => handleDeleteClick(entry.id)}
-                            variant="outline"
-                            size="sm"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button> */}
+                          </Button>                          
                         </div>
                       </div>
 
@@ -794,7 +786,7 @@ export default function VehicleEntrySystem() {
                               {tipo}
                             </Badge>
                           ))}
-                        </div>                        
+                        </div>                      
                       </div>
 
                       <div className="flex items-center gap-2">
