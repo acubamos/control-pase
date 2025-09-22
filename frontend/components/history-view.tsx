@@ -406,12 +406,12 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                   <Filter className="h-4 w-4 mr-2" />
                   Filtros
                 </Button>
-                {/* {selectedEntries.length > 0 && (
+                {selectedEntries.length > 0 && (
                   <Button onClick={handleDeleteSelected} variant="destructive" size="sm">
                     <Trash2 className="h-4 w-4 mr-2" />
                     Eliminar ({selectedEntries.length})
                   </Button>
-                )} */}
+                )}
                 <ExportMenu entries={filteredEntries} />
               </div>
             </div>

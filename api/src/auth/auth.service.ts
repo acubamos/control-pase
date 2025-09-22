@@ -38,7 +38,7 @@ export class AuthService implements OnModuleInit {
       {
         username: "admin_anual",
         password: "admin789",
-        fullName: "Administrador Anual",
+        fullName: "AZUMAT",
         role: UserRole.YEARLY_ADMIN,
       },
     ]
