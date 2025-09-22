@@ -406,12 +406,12 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                   <Filter className="h-4 w-4 mr-2" />
                   Filtros
                 </Button>
-                {selectedEntries.length > 0 && (
+                {/* {selectedEntries.length > 0 && (
                   <Button onClick={handleDeleteSelected} variant="destructive" size="sm">
                     <Trash2 className="h-4 w-4 mr-2" />
                     Eliminar ({selectedEntries.length})
                   </Button>
-                )}
+                )} */} 
                 <ExportMenu entries={filteredEntries} />
               </div>
             </div>
@@ -585,16 +585,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                             <span>CI: {entry.ci}</span>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={() => handlePhotoCapture(entry.id)}
-                          variant="outline"
-                          size="sm"
-                        >
-                          <Camera className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      </div>                      
                     </div>
 
                     <div className="flex items-center gap-2">

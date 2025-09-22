@@ -117,15 +117,9 @@ export function UserMenu({ onLogout }: UserMenuProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>
-            <div className="flex flex-col space-y-1">
-              <p className="text-sm font-medium">{user.fullName}</p>              
-            </div>
-          </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem disabled>
-            <Shield className="mr-2 h-4 w-4" />
-            <span>{roleDescription}</span>
+          <DropdownMenuItem>           
+            <span>Bienvenido {roleDescription}</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           {user.permissions.canManageUsers && (
