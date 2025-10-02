@@ -1,5 +1,5 @@
 # Etapa de construcción
-FROM node:22-alpine AS build-stage
+FROM node:22.13.1-alpine AS build-stage
 WORKDIR /app
 
 # Instalar pnpm
@@ -16,7 +16,7 @@ COPY . .
 RUN pnpm run build
 
 # Etapa de producción
-FROM node:22-alpine AS production-stage
+FROM node:22.13.1-alpine AS production-stage
 
 WORKDIR /app
 
