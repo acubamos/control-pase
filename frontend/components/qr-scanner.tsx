@@ -14,7 +14,7 @@ interface QRScannerProps {
 }
 
 // Configuración ajustable
-const SCAN_INTERVAL = 150 // ms entre escaneos (reducido de 60fps ~16ms)
+const SCAN_INTERVAL = 150 
 const SCAN_QUALITY = 0.7 // Calidad de imagen reducida para procesamiento más rápido
 const MIN_QR_SIZE = 150 // Tamaño mínimo esperado del QR en píxeles
 
@@ -238,3 +238,4 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     </Dialog>
   )
 }
+
