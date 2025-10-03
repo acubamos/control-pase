@@ -1,5 +1,5 @@
 # Etapa de construcción con todas las dependencias
-FROM node:22.13.1-alpine AS build-stage
+FROM node:22-alpine AS build-stage
 WORKDIR /app
 
 # Instalar dependencias
@@ -11,7 +11,7 @@ COPY . .
 RUN npm run build
 
 # Etapa de producción
-FROM node:22.13.1-alpine AS production-stage
+FROM node:22-alpine AS production-stage
 WORKDIR /app
 
 # Instala curl para healthchecks
