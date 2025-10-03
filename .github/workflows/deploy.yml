@@ -52,7 +52,7 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: ./control-pase-azumat-backend
+        working-directory: ./api
 
     steps:
     - name: 🛎️ Checkout código
@@ -63,7 +63,7 @@ jobs:
       with:
         node-version: '22'  # ⚠️ AJUSTAR a la versión
         cache: 'npm'
-        cache-dependency-path: ./control-pase-azumat/api/package-lock.json  # ⚠️ AJUSTAR a la ruta de tu package-lock.json
+        cache-dependency-path: ./api/package-lock.json  # ⚠️ AJUSTAR a la ruta de tu package-lock.json
 
     - name: 📥 Instalar dependencias (CRÍTICO para tests)
       run: npm ci  # o npm ci si tienes package-lock.json
