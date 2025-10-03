@@ -23,8 +23,11 @@ services:
       - control-network   
 
   api:
-    build: 
+    build:
       context: ./api
+      args:
+        NO_CACHE: true  # Define esta variable
+      dockerfile: Dockerfile
     container_name: control-api
     restart: always
     mem_limit: 512m      # Limita la RAM a 512 MB
@@ -62,7 +65,11 @@ services:
       - "traefik.docker.network=proxy"
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        NO_CACHE: true  # Define esta variable
+      dockerfile: Dockerfile
     container_name: control-frontend
     restart: always
     mem_limit: 512m      # Limita la RAM a 512 MB
