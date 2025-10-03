@@ -86,7 +86,7 @@ jobs:
           find "$BACKUP_ROOT" -maxdepth 1 -type d -mtime +7 -exec rm -rf {} \;
           echo "🗑️ Backups antiguos eliminados"
 
-          # ---------- DEPLOY ----------
+          # ---------- DEPLOY ---------- #
           echo "🚀 Iniciando despliegue..."
           cd "$PROJECT_DIR"
           docker-compose down -v
