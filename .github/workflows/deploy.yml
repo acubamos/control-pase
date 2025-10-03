@@ -91,7 +91,7 @@ jobs:
           cd "$PROJECT_DIR"
           docker-compose down -v
           docker builder prune -f
-          docker-compose up -d --build --no-cache
+          docker-compose up -d
           echo "✅ Despliegue completado"
           
     - name: 📣 Notificar éxito
