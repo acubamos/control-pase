@@ -34,7 +34,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: 🔍 Escaneo de seguridad con Trivy (TODO EN UNO)
-      uses: aquasecurity/trivy-action@v0.33.1
+      uses: aquasecurity/trivy-action@0.33.1
       with:
         scan-type: 'fs'
         scan-ref: '.'
