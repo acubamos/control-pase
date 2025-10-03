@@ -26,7 +26,12 @@ services:
     build:
       context: ./api
       dockerfile: Dockerfile
-    pull_policy: never
+      args:
+        DOCKER_BUILDKIT: 1
+        BUILDKIT_INLINE_CACHE: 1
+        NODE_IMAGE: node@sha256:cb3143549582cc5f74f26f0992cdef4a422b22128cb517f94173a5f910fa4ee7
+    image: control-api:local
+    pull_policy: never    # Evita pulls automáticos
     container_name: control-api
     restart: always
     mem_limit: 512m      # Limita la RAM a 512 MB
@@ -67,7 +72,12 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    pull_policy: never
+      args:
+        DOCKER_BUILDKIT: 1
+        BUILDKIT_INLINE_CACHE: 1
+        NODE_IMAGE: node@sha256:cb3143549582cc5f74f26f0992cdef4a422b22128cb517f94173a5f910fa4ee7
+    pull_policy: never    # Evita pulls automáticos
+    image: frontend:local
     container_name: control-frontend
     restart: always
     mem_limit: 512m      # Limita la RAM a 512 MB

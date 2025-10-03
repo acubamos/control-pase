@@ -1,5 +1,7 @@
 # Etapa de construcción
-FROM node:22-alpine AS build-stage
+#FROM node:22-alpine AS build-stage
+ARG NODE_IMAGE=node@sha256:cb3143549582cc5f74f26f0992cdef4a422b22128cb517f94173a5f910fa4ee7
+FROM ${NODE_IMAGE} AS build-stage
 WORKDIR /app
 
 # Instalar pnpm
@@ -16,8 +18,8 @@ COPY . .
 RUN pnpm run build
 
 # Etapa de producción
-FROM node:22-alpine AS production-stage
-
+#FROM node:22-alpine AS production-stage
+FROM ${NODE_IMAGE} AS production-stage
 WORKDIR /app
 
 # Instalar pnpm
