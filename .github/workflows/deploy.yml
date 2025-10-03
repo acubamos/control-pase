@@ -63,7 +63,7 @@ jobs:
       with:
         node-version: '22.13.1'  # ⚠️ AJUSTAR a la versión
         cache: 'npm'
-        cache-dependency-path: ./control-pase-azumat-backend/package-lock.json
+        cache-dependency-path: ./control-pase-backend/package-lock.json
 
     - name: 📥 Instalar dependencias (CRÍTICO para tests)
       run: npm ci  # o npm ci si tienes package-lock.json
