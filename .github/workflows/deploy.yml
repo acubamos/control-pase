@@ -90,8 +90,8 @@ jobs:
           echo "🚀 Iniciando despliegue..."
           cd "$PROJECT_DIR"
           docker-compose down -v
-          docker builder prune -af
-          docker-compose up -d --build
+          docker builder prune --force --filter type=exec_creds,type=cache
+          docker-compose up -d --build --no-cache
           echo "✅ Despliegue completado"
           
     - name: 📣 Notificar éxito
