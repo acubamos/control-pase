@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Camera, X } from "lucide-react"
+import { Camera, X, Upload, Scan } from "lucide-react"
 import { parseQRData, type QRData } from "@/lib/qr-scanner"
 import jsQR from "jsqr"
 
@@ -13,15 +13,25 @@ interface QRScannerProps {
   onClose: () => void
 }
 
+// Configuración ajustable
+const SCAN_INTERVAL = 150
+const SCAN_QUALITY = 0.7
+const MIN_QR_SIZE = 150
+
 export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   const [isScanning, setIsScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [detected, setDetected] = useState(false)
-  const [cameraReady, setCameraReady] = useState(false)
+  const [activeTab, setActiveTab] = useState<"camera" | "upload">("camera")
+  const [isProcessingImage, setIsProcessingImage] = useState(false)
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const animationFrameRef = useRef<number | null>(null)
+  const lastScanTimeRef = useRef<number>(0)
   const scanAttemptsRef = useRef<number>(0)
 
   const startCamera = async () => {
@@ -29,17 +39,14 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       setError(null)
       setIsScanning(true)
       setDetected(false)
-      setCameraReady(false)
       scanAttemptsRef.current = 0
 
-      // Configuración de cámara para máxima calidad
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: "environment",
-          width: { ideal: 1920, max: 1920 },
-          height: { ideal: 1080, max: 1080 },
-          frameRate: { ideal: 30, min: 25 },
-          aspectRatio: { ideal: 1.777 } // 16:9
+          width: { ideal: 1024 },
+          height: { ideal: 768 },
+          frameRate: { ideal: 20 }
         },
       })
 
@@ -47,39 +54,16 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream
-        
-        // Esperar a que el video esté completamente cargado y enfocado
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play().then(() => {
-            // Delay adicional para que la cámara se estabilice y enfoque
-            setTimeout(() => {
-              setCameraReady(true)
-              animationFrameRef.current = requestAnimationFrame(scanLoop)
-            }, 1000)
-          })
-        }
+        await videoRef.current.play()
       }
+
+      setTimeout(() => {
+        animationFrameRef.current = requestAnimationFrame(scanLoop)
+      }, 500)
     } catch (err) {
       console.error("Error accessing camera:", err)
-      // Fallback a configuración más básica si falla la de alta resolución
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: "environment"
-          },
-        })
-        
-        streamRef.current = stream
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream
-          await videoRef.current.play()
-          setCameraReady(true)
-          animationFrameRef.current = requestAnimationFrame(scanLoop)
-        }
-      } catch (fallbackError) {
-        setError("No se pudo acceder a la cámara. Asegúrate de dar los permisos necesarios.")
-        setIsScanning(false)
-      }
+      setError("No se pudo acceder a la cámara. Asegúrate de dar los permisos necesarios.")
+      setIsScanning(false)
     }
   }
 
@@ -102,28 +86,15 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
 
     setIsScanning(false)
     setDetected(false)
-    setCameraReady(false)
   }, [])
 
-  const enhanceImageContrast = (imageData: ImageData): ImageData => {
-    // Mejorar contraste para ayudar a la detección
-    const data = imageData.data
-    const contrast = 1.2
-    const brightness = 10
-    
-    for (let i = 0; i < data.length; i += 4) {
-      // Aplicar contraste
-      data[i] = Math.min(255, Math.max(0, (data[i] - 128) * contrast + 128 + brightness))
-      data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - 128) * contrast + 128 + brightness))
-      data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - 128) * contrast + 128 + brightness))
-    }
-    
-    return imageData
-  }
-
   const scanFrame = useCallback(() => {
-    if (!videoRef.current || !canvasRef.current || detected || !cameraReady) return
+    if (!videoRef.current || !canvasRef.current || detected) return
 
+    const now = Date.now()
+    if (now - lastScanTimeRef.current < SCAN_INTERVAL) return
+
+    lastScanTimeRef.current = now
     scanAttemptsRef.current++
 
     const video = videoRef.current
@@ -132,59 +103,39 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
 
     if (!context || video.readyState !== video.HAVE_ENOUGH_DATA) return
 
-    // Usar resolución completa para máxima calidad de detección
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
+    const scale = SCAN_QUALITY
+    canvas.width = video.videoWidth * scale
+    canvas.height = video.videoHeight * scale
 
     context.drawImage(video, 0, 0, canvas.width, canvas.height)
     
     const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
     
-    // Aplicar mejora de imagen
-    const enhancedImageData = enhanceImageContrast(imageData)
-    
-    // Múltiples estrategias de detección
-    const scanStrategies = [
-      { inversionAttempts: "attemptBoth" as const },
-      { inversionAttempts: "dontInvert" as const },
-      { inversionAttempts: "invertFirst" as const }
-    ]
-
-    let code = null
-    for (const strategy of scanStrategies) {
-      code = jsQR(enhancedImageData.data, enhancedImageData.width, enhancedImageData.height, {
-        ...strategy,
-        maxResolution: Math.max(enhancedImageData.width, enhancedImageData.height),
-      })
-      
-      if (code) break
-    }
-
-    if (!code) {
-      // Intentar con la imagen original si la mejorada no funciona
-      code = jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: "attemptBoth",
-        maxResolution: Math.max(imageData.width, imageData.height),
-      })
-    }
+    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+      inversionAttempts: "attemptBoth",
+      maxResolution: 800,
+    })
 
     if (code) {
-      console.log("QR detectado con datos:", code.data)
-      const qrData = parseQRData(code.data)
-      if (qrData) {
-        setDetected(true)
-        console.log(`QR detectado y parseado correctamente en el intento: ${scanAttemptsRef.current}`)
-        
-        // Dar feedback visual antes de procesar
-        setTimeout(() => {
-          onScan(qrData)
-          handleClose()
-        }, 500)
-      } else {
-        console.warn("QR detectado pero no se pudo parsear:", code.data)
+      const qrSize = Math.max(
+        code.location.topRightCorner.x - code.location.topLeftCorner.x,
+        code.location.bottomRightCorner.y - code.location.topRightCorner.y
+      )
+      
+      if (qrSize >= MIN_QR_SIZE * scale) {
+        const qrData = parseQRData(code.data)
+        if (qrData) {
+          setDetected(true)
+          console.log(`QR detectado en el intento: ${scanAttemptsRef.current}`)
+          
+          setTimeout(() => {
+            onScan(qrData)
+            handleClose()
+          }, 300)
+        }
       }
     }
-  }, [detected, cameraReady, onScan])
+  }, [detected, onScan])
 
   const scanLoop = useCallback(() => {
     scanFrame()
@@ -193,15 +144,132 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     }
   }, [scanFrame, detected])
 
+  // Función para procesar imagen subida
+  const processImage = useCallback((image: HTMLImageElement) => {
+    setIsProcessingImage(true)
+    setError(null)
+
+    try {
+      const canvas = document.createElement("canvas")
+      const context = canvas.getContext("2d")
+      
+      if (!context) {
+        throw new Error("No se pudo obtener el contexto del canvas")
+      }
+
+      // Usar tamaño original de la imagen para máxima calidad
+      canvas.width = image.naturalWidth
+      canvas.height = image.naturalHeight
+
+      context.drawImage(image, 0, 0, canvas.width, canvas.height)
+      
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+      
+      // Intentar múltiples estrategias de detección
+      const scanStrategies = [
+        { inversionAttempts: "attemptBoth" as const },
+        { inversionAttempts: "dontInvert" as const },
+        { inversionAttempts: "invertFirst" as const }
+      ]
+
+      let code = null
+      for (const strategy of scanStrategies) {
+        code = jsQR(imageData.data, imageData.width, imageData.height, {
+          ...strategy,
+          maxResolution: Math.max(imageData.width, imageData.height),
+        })
+        
+        if (code) break
+      }
+
+      if (code) {
+        const qrData = parseQRData(code.data)
+        if (qrData) {
+          setDetected(true)
+          console.log("QR detectado en imagen subida")
+          
+          setTimeout(() => {
+            onScan(qrData)
+            handleClose()
+          }, 500)
+        } else {
+          setError("QR detectado pero no se pudo procesar. Asegúrate de que sea un código válido.")
+        }
+      } else {
+        setError("No se pudo detectar ningún código QR en la imagen. Intenta con otra foto.")
+      }
+    } catch (err) {
+      console.error("Error processing image:", err)
+      setError("Error al procesar la imagen. Intenta con otra foto.")
+    } finally {
+      setIsProcessingImage(false)
+    }
+  }, [onScan])
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validar tipo de archivo
+    if (!file.type.startsWith('image/')) {
+      setError("Por favor sube solo archivos de imagen")
+      return
+    }
+
+    // Validar tamaño (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setError("La imagen es demasiado grande. Máximo 10MB.")
+      return
+    }
+
+    const reader = new FileReader()
+    
+    reader.onload = (e) => {
+      const result = e.target?.result as string
+      setSelectedImage(result)
+      
+      const img = new Image()
+      img.onload = () => processImage(img)
+      img.onerror = () => setError("Error al cargar la imagen")
+      img.src = result
+    }
+    
+    reader.onerror = () => setError("Error al leer el archivo")
+    reader.readAsDataURL(file)
+  }
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleTabChange = (tab: "camera" | "upload") => {
+    setActiveTab(tab)
+    setError(null)
+    setSelectedImage(null)
+    
+    if (tab === "camera") {
+      stopCamera()
+      setTimeout(() => {
+        startCamera()
+      }, 100)
+    } else {
+      stopCamera()
+    }
+  }
+
   const handleClose = useCallback(() => {
     stopCamera()
+    setSelectedImage(null)
+    setActiveTab("camera")
     onClose()
   }, [stopCamera, onClose])
 
   // Efecto para manejar apertura/cierre
   useEffect(() => {
     if (isOpen) {
-      startCamera()
+      if (activeTab === "camera") {
+        startCamera()
+      }
     } else {
       stopCamera()
     }
@@ -209,32 +277,61 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     return () => {
       stopCamera()
     }
-  }, [isOpen, stopCamera])
+  }, [isOpen, activeTab])
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-md sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Camera className="h-5 w-5" />
+            <Scan className="h-5 w-5" />
             Escanear Código QR
-            {isScanning && !detected && (
+            {isScanning && !detected && activeTab === "camera" && (
               <span className="text-sm font-normal text-muted-foreground">
-                ({scanAttemptsRef.current} escaneos)
+                ({scanAttemptsRef.current} intentos)
               </span>
             )}
           </DialogTitle>
         </DialogHeader>
 
+        {/* Selector de modo */}
+        <div className="flex border rounded-lg p-1 bg-muted/50">
+          <Button
+            variant={activeTab === "camera" ? "default" : "ghost"}
+            size="sm"
+            className="flex-1 gap-2"
+            onClick={() => handleTabChange("camera")}
+          >
+            <Camera className="h-4 w-4" />
+            Cámara
+          </Button>
+          <Button
+            variant={activeTab === "upload" ? "default" : "ghost"}
+            size="sm"
+            className="flex-1 gap-2"
+            onClick={() => handleTabChange("upload")}
+          >
+            <Upload className="h-4 w-4" />
+            Subir Foto
+          </Button>
+        </div>
+
         <div className="space-y-4">
           {error ? (
-            <div className="text-center py-8">
+            <div className="text-center py-4">
               <p className="text-red-600 mb-4">{error}</p>
-              <Button onClick={startCamera} variant="outline">
-                Intentar de nuevo
-              </Button>
+              {activeTab === "camera" ? (
+                <Button onClick={startCamera} variant="outline">
+                  Intentar de nuevo
+                </Button>
+              ) : (
+                <Button onClick={triggerFileInput} variant="outline">
+                  Elegir otra imagen
+                </Button>
+              )}
             </div>
-          ) : (
+          ) : activeTab === "camera" ? (
+            // Vista de cámara
             <div className="relative">
               <video 
                 ref={videoRef} 
@@ -245,61 +342,108 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
               <canvas ref={canvasRef} className="hidden" />
 
               {isScanning && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  {/* Marco de escaneo */}
+                <div className="absolute inset-0 flex items-center justify-center">
                   <div
-                    className={`border-3 w-56 h-56 rounded-lg transition-all duration-500 ${
+                    className={`border-2 w-48 h-48 rounded-lg transition-all duration-300 ${
                       detected
-                        ? "border-green-500 bg-green-500/20 scale-110 shadow-lg"
-                        : cameraReady
-                        ? "border-blue-500 border-solid animate-pulse shadow-lg"
-                        : "border-gray-400 border-dashed"
+                        ? "border-green-500 bg-green-500/20 scale-110"
+                        : "border-green-500 border-dashed animate-pulse"
                     }`}
                   />
-                  
-                  {/* Indicador de estado */}
-                  {!cameraReady && (
-                    <div className="mt-4 text-white bg-black/70 px-3 py-1 rounded-full text-sm">
-                      ⏳ Inicializando cámara...
-                    </div>
-                  )}
                 </div>
               )}
 
               {detected && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-lg">
-                  <div className="text-white text-center bg-green-600/90 px-6 py-4 rounded-xl">
-                    <div className="animate-bounce mb-2 text-2xl">✅</div>
-                    <p className="font-semibold text-lg">¡QR Detectado!</p>
-                    <p className="text-sm mt-1">Procesando información...</p>
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg">
+                  <div className="text-white text-center">
+                    <div className="animate-bounce mb-2">✅</div>
+                    <p className="font-semibold">¡QR Detectado!</p>
                   </div>
                 </div>
               )}
             </div>
+          ) : (
+            // Vista de subir imagen
+            <div className="space-y-4">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                accept="image/*"
+                className="hidden"
+              />
+              
+              {selectedImage ? (
+                <div className="relative">
+                  <img 
+                    src={selectedImage} 
+                    alt="Imagen seleccionada"
+                    className="w-full h-64 sm:h-80 object-contain bg-black rounded-lg"
+                  />
+                  {isProcessingImage && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg">
+                      <div className="text-white text-center">
+                        <div className="animate-spin mb-2">⏳</div>
+                        <p className="font-semibold">Procesando imagen...</p>
+                      </div>
+                    </div>
+                  )}
+                  {detected && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg">
+                      <div className="text-white text-center">
+                        <div className="animate-bounce mb-2">✅</div>
+                        <p className="font-semibold">¡QR Detectado!</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div 
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-gray-400 transition-colors"
+                  onClick={triggerFileInput}
+                >
+                  <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600 mb-2">Haz clic para subir una imagen</p>
+                  <p className="text-sm text-gray-500">JPG, PNG, WebP (Máx. 10MB)</p>
+                </div>
+              )}
+              
+              {!selectedImage && (
+                <Button 
+                  onClick={triggerFileInput}
+                  variant="outline" 
+                  className="w-full gap-2"
+                >
+                  <Upload className="h-4 w-4" />
+                  Seleccionar Imagen
+                </Button>
+              )}
+            </div>
           )}          
           
-          <div className="text-center space-y-3">
-            <p className="text-sm text-gray-600">
-              Para mejor detección:
-            </p>
-            <ul className="text-xs text-gray-500 space-y-1">
-              <li>• Asegura buena iluminación</li>
-              <li>• Mantén el QR dentro del marco</li>
-              <li>• Evita sombras y reflejos</li>
-              <li>• Acerca lentamente hasta que enfoque</li>
-            </ul>
-            
-            {isScanning && !detected && cameraReady && (
-              <p className="text-xs text-blue-600 font-medium">
-                🔍 Escaneando en alta calidad... {scanAttemptsRef.current > 50 ? "Ajusta la distancia" : ""}
+          <div className="text-center space-y-2">
+            {activeTab === "camera" ? (
+              <>
+                <p className="text-sm text-gray-600">
+                  Apunta la cámara hacia el código QR. Asegúrate de tener buena iluminación.
+                </p>
+                {isScanning && !detected && (
+                  <p className="text-xs text-orange-600">
+                    Escaneando... Acerca o aleja la cámara si no detecta
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-gray-600">
+                Sube una foto que contenga el código QR. Asegúrate de que esté nítido y bien iluminado.
               </p>
             )}
           </div>
 
-          <div className="flex justify-center pt-2">
+          <div className="flex justify-center">
             <Button onClick={handleClose} variant="outline" className="gap-2">
               <X className="h-4 w-4" />
-              Cancelar escaneo
+              Cancelar
             </Button>
           </div>
         </div>
