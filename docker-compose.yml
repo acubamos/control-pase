@@ -25,6 +25,8 @@ services:
   api:
     build:
       context: ./api
+      dockerfile: Dockerfile
+    pull_policy: never
     container_name: control-api
     restart: always
     mem_limit: 512m      # Limita la RAM a 512 MB
@@ -64,6 +66,8 @@ services:
   frontend:
     build:
       context: ./frontend
+      dockerfile: Dockerfile
+    pull_policy: never
     container_name: control-frontend
     restart: always
     mem_limit: 512m      # Limita la RAM a 512 MB
