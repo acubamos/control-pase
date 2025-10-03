@@ -158,37 +158,37 @@ jobs:
           # docker-compose up -d --build
           DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker-compose build \
             --build-arg BUILDKIT_INLINE_CACHE=1
-          docker-compose up -d
+          # docker-compose up -d
           
-          # ⏱️ Esperar inicialización
-          echo "⏳ Esperando que los contenedores se inicien..."
-          sleep 15
+          # # ⏱️ Esperar inicialización
+          # echo "⏳ Esperando que los contenedores se inicien..."
+          # sleep 15
 
-          # 🔍 VERIFICACIÓN DE ESTADO (MEJORADO)
-          echo "🔍 Verificando estado de los servicios..."
-          if docker-compose ps | grep -q "Up"; then
-            echo "✅ Contenedores en ejecución"
+          # # 🔍 VERIFICACIÓN DE ESTADO (MEJORADO)
+          # echo "🔍 Verificando estado de los servicios..."
+          # if docker-compose ps | grep -q "Up"; then
+          #   echo "✅ Contenedores en ejecución"
             
-            # Verificación adicional de salud (adaptar según tu app)
-            if docker-compose logs --tail=10 | grep -i "error"; then
-              echo "⚠️ Se detectaron errores en logs"
-            else
-              echo "✅ No se detectaron errores en logs"
-            fi
-          else
-            echo "❌ Algunos contenedores no están funcionando"
-            docker-compose ps
-            exit 1
-          fi
+          #   # Verificación adicional de salud (adaptar según tu app)
+          #   if docker-compose logs --tail=10 | grep -i "error"; then
+          #     echo "⚠️ Se detectaron errores en logs"
+          #   else
+          #     echo "✅ No se detectaron errores en logs"
+          #   fi
+          # else
+          #   echo "❌ Algunos contenedores no están funcionando"
+          #   docker-compose ps
+          #   exit 1
+          # fi
 
-          # 📊 MÉTRICAS - Fin de despliegue
-          DEPLOY_END=$(date +%s)
-          DEPLOY_DURATION=$((DEPLOY_END - DEPLOY_START))
-          echo "📈 Duración total: ${DEPLOY_DURATION} segundos"
+          # # 📊 MÉTRICAS - Fin de despliegue
+          # DEPLOY_END=$(date +%s)
+          # DEPLOY_DURATION=$((DEPLOY_END - DEPLOY_START))
+          # echo "📈 Duración total: ${DEPLOY_DURATION} segundos"
 
-          # 🧹 Limpieza conservadora
-          docker system prune -f --filter "until=48h"
-          echo "🧹 Limpieza de Docker completada"
+          # # 🧹 Limpieza conservadora
+          # docker system prune -f --filter "until=48h"
+          # echo "🧹 Limpieza de Docker completada"
 
     - name: 📣 Notificar resultado
       if: always()  # Se ejecuta siempre (éxito o fallo)
