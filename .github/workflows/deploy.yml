@@ -34,7 +34,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: 🔍 Escaneo de seguridad con Trivy (TODO EN UNO)
-      uses: aquasecurity/trivy-action@master
+      uses: aquasecurity/trivy-action@v0.33.1
       with:
         scan-type: 'fs'
         scan-ref: '.'
@@ -63,10 +63,7 @@ jobs:
       with:
         node-version: '22'  # ⚠️ AJUSTAR a la versión
         cache: 'npm'
-        cache-dependency-path: ./api/package-lock.json  # ⚠️ AJUSTAR a la ruta de tu package-lock.json
-
-    - name: 📥 Instalar dependencias (CRÍTICO para tests)
-      run: npm install
+        cache-dependency-path: api/package-lock.json  # ⚠️ AJUSTAR a la ruta de tu package-lock.json
 
     - name: 📥 Instalar dependencias (ci)
       run: npm ci  # o npm ci si tienes package-lock.json
