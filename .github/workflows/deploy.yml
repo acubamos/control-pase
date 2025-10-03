@@ -152,13 +152,13 @@ jobs:
           find "$BACKUP_ROOT" -name "*.tar.gz" -mtime +7 -delete
           echo "🗑️ Backups >7 días eliminados"
 
-          # 🐳 DESPLIEGUE CON VERIFICACIÓN
-          echo "🚀 Iniciando despliegue de contenedores..."
-          docker-compose down 2>/dev/null || echo "ℹ️ No hay contenedores ejecutándose"
-          # docker-compose up -d --build
-          DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker-compose build \
-            --build-arg BUILDKIT_INLINE_CACHE=1
-          # docker-compose up -d
+          # # 🐳 DESPLIEGUE CON VERIFICACIÓN
+          # echo "🚀 Iniciando despliegue de contenedores..."
+          # docker-compose down 2>/dev/null || echo "ℹ️ No hay contenedores ejecutándose"
+          # # docker-compose up -d --build
+          # DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker-compose build \
+          #   --build-arg BUILDKIT_INLINE_CACHE=1
+          # # docker-compose up -d
           
           # # ⏱️ Esperar inicialización
           # echo "⏳ Esperando que los contenedores se inicien..."
