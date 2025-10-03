@@ -155,7 +155,9 @@ jobs:
           # 🐳 DESPLIEGUE CON VERIFICACIÓN
           echo "🚀 Iniciando despliegue de contenedores..."
           docker-compose down 2>/dev/null || echo "ℹ️ No hay contenedores ejecutándose"
-          docker-compose up -d --build
+          # docker-compose up -d --build
+          docker-compose build --no-pull   # Evita pulls durante el build
+          docker-compose up -d
           
           # ⏱️ Esperar inicialización
           echo "⏳ Esperando que los contenedores se inicien..."
