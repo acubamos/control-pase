@@ -17,29 +17,92 @@ on:
   push:
     branches: [main]
 
-
 # Evita despliegues simultáneos en la misma rama
 concurrency:
   group: main
   cancel-in-progress: true
 
   ###########################################################################
-  # 1) DEPLOY                                                              #
+  # 1. SEGURIDAD - Solo escaneo básico (no requiere construcción)           #
   ###########################################################################
   
 jobs:
+  security-scan:
+    runs-on: ubuntu-24.04
+    steps:
+    - name: 🛎️ Checkout código
+      uses: actions/checkout@v4
+
+    - name: 🔍 Escaneo de seguridad con Trivy (TODO EN UNO)
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'table'
+        exit-code: 0  # No falla el workflow, solo reporta
+        scanners: 'vuln,secret'  # ⬅️ Escanea vulnerabilidades y secretos
+  
+  ###########################################################################
+  # 🧪 2. TESTING - Opcional y seguro (no rompe si no hay tests)            #                                                #
+  ###########################################################################
+  
+  tests:
+    runs-on: ubuntu-24.04
+    needs: security-scan
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./control-pase-azumat-backend
+
+    steps:
+    - name: 🛎️ Checkout código
+      uses: actions/checkout@v4
+
+    - name: ⎔ Setup Node.js (necesario para NestJS)
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22.13.1'  # ⚠️ AJUSTAR a la versión
+        cache: 'npm'
+        cache-dependency-path: ./control-pase-azumat-backend/package-lock.json
+
+    - name: 📥 Instalar dependencias (CRÍTICO para tests)
+      run: npm ci  # o npm ci si tienes package-lock.json
+
+    - name: 🏗️ Build de la aplicación
+      run: npm run build  # Esto ejecuta "nest build"
+
+    - name: 🧪 Ejecutar tests unitarios
+      run: npm test -- --passWithNoTests # Ejecuta "jest"
+
+    - name: 📊 Tests de cobertura
+      run: npm run test:cov -- --passWithNoTests  # Ejecuta "jest --coverage"
+
+    # - name: 🔍 Tests e2e (opcional)
+    #   run: npm run test:e2e -- --passWithNoTests  # Si quieres ejecutar end-to-end tests
+
+  ###########################################################################
+  # 🚀 3. DEPLOY                                                            #
+  ###########################################################################
+
   deploy:
+    needs: tests # Espera las verificaciones de tests
     if: |
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
       (github.event_name == 'push')
     runs-on: ubuntu-24.04
-    environment: main
+    environment: staging
 
     steps:
     - name: 🛎️ Checkout código
       uses: actions/checkout@v4
 
     - name: 🧹 Eliminar carpeta .git antes de transferir
-      run: rm -rf .git
+      run: |
+        rm -rf .git
+        # Limpieza segura - solo elimina lo innecesario
+        find . -name "*.log" -delete 2>/dev/null || true
+        find . -name ".DS_Store" -delete 2>/dev/null || true
+        echo "✅ Archivos temporales eliminados"
 
     - name: 📤 Transferir archivos al VPS
       uses: appleboy/scp-action@v1
@@ -66,7 +129,11 @@ jobs:
           BACKUP_ROOT="/mnt/Data/control-pase-backups"
 
           echo "🔍 Verificando directorio..."
-          ls -la "$PROJECT_DIR"
+          ls -la "$PROJECT_DIR" || echo "⚠️ Directorio no accesible"
+
+          # 📊 MÉTRICAS - Inicio de despliegue
+          DEPLOY_START=$(date +%s)
+          echo "🏁 Iniciando despliegue a las $(date)"
 
           # ---------- BACKUP ----------
           TIMESTAMP=$(date +%Y%m%d%H%M%S)
@@ -74,157 +141,76 @@ jobs:
           mkdir -p "$BACKUP_DIR"
           echo "📦 Creando backup en $BACKUP_DIR"
           
-          # Excluye db-data, backups
-          echo "📦 Creando backup en $BACKUP_DIR"
-          rsync -a --delete \
-            --exclude 'backups' \
-            --exclude 'db-data' \
-            "$PROJECT_DIR/"  "$BACKUP_DIR/"
-          echo "✅ Backup completado"
+          # Backup más eficiente
+          cd "$PROJECT_DIR"
+          tar --exclude='db-data' --exclude='backups' --exclude='node_modules' \
+              --exclude='.git' -czf "$BACKUP_DIR/backup.tar.gz" .
+          echo "✅ Backup creado: $BACKUP_DIR/backup.tar.gz"
 
           # Borrar backups más antiguos de 7 días
-          find "$BACKUP_ROOT" -maxdepth 1 -type d -mtime +7 -exec rm -rf {} \;
-          echo "🗑️ Backups antiguos eliminados"
+          find "$BACKUP_ROOT" -name "*.tar.gz" -mtime +7 -delete
+          echo "🗑️ Backups >7 días eliminados"
 
-          # ---------- DEPLOY ---------- #
-          echo "🚀 Iniciando despliegue..."
-          cd "$PROJECT_DIR"
-          docker-compose down -v
-          docker builder prune -f
+          # 🐳 DESPLIEGUE CON VERIFICACIÓN
+          echo "🚀 Iniciando despliegue de contenedores..."
+          docker-compose down 2>/dev/null || echo "ℹ️ No hay contenedores ejecutándose"
           docker-compose up -d --build
-          echo "✅ Despliegue completado"
           
-    - name: 📣 Notificar éxito
-      if: success()
+          # ⏱️ Esperar inicialización
+          echo "⏳ Esperando que los contenedores se inicien..."
+          sleep 15
+
+          # 🔍 VERIFICACIÓN DE ESTADO (MEJORADO)
+          echo "🔍 Verificando estado de los servicios..."
+          if docker-compose ps | grep -q "Up"; then
+            echo "✅ Contenedores en ejecución"
+            
+            # Verificación adicional de salud (adaptar según tu app)
+            if docker-compose logs --tail=10 | grep -i "error"; then
+              echo "⚠️ Se detectaron errores en logs"
+            else
+              echo "✅ No se detectaron errores en logs"
+            fi
+          else
+            echo "❌ Algunos contenedores no están funcionando"
+            docker-compose ps
+            exit 1
+          fi
+
+          # 📊 MÉTRICAS - Fin de despliegue
+          DEPLOY_END=$(date +%s)
+          DEPLOY_DURATION=$((DEPLOY_END - DEPLOY_START))
+          echo "📈 Duración total: ${DEPLOY_DURATION} segundos"
+
+          # 🧹 Limpieza conservadora
+          docker system prune -f --filter "until=48h"
+          echo "🧹 Limpieza de Docker completada"
+
+    - name: 📣 Notificar resultado
+      if: always()  # Se ejecuta siempre (éxito o fallo)
       env:
         TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         TELEGRAM_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
         COMMIT_URL: https://github.com/${{ github.repository }}/commit/${{ github.sha }}
+        WORKFLOW_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
       run: |
-        MSG="✅ *Despliegue exitoso en VPS (staging)*  
-        🔧 *Repo:* ${{ github.repository }}  
-        🔢 *Commit:* [Ver cambios]($COMMIT_URL)
+        if [ "${{ job.status }}" == "success" ]; then
+          EMOJI="✅"
+          TEXTO_ESTADO="exitosa"
+        else
+          EMOJI="❌"
+          TEXTO_ESTADO="fallida"
+        fi
 
-        🚀 El sistema fue actualizado correctamente."
+        MSG="$EMOJI *Despliegue $TEXTO_ESTADO - Staging*
+        • *Repo:* ${{ github.repository }}
+        • *Commit:* ${GITHUB_SHA:0:8}
+        • *Ejecución:* [Ver detalles]($WORKFLOW_URL)
+        • *Hora:* $(date -u +'%H:%M:%S UTC')
+
+        _Estado del pipeline: ${{ job.status }}_"
+
         curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage" \
           -d chat_id="$TELEGRAM_CHAT" \
           --data-urlencode "text=$MSG" \
           -d parse_mode="Markdown" > /dev/null
-
-    - name: 📣 Notificar error
-      if: failure()
-      env:
-        TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-        TELEGRAM_CHAT:  ${{ secrets.TELEGRAM_CHAT_ID }}
-        COMMIT_URL: https://github.com/${{ github.repository }}/commit/${{ github.sha }}
-      run: |
-        MSG="❌ *Fallo en despliegue a staging*  
-        🔧 *Repo:* ${{ github.repository }}  
-        🔢 *Commit:* [Ver cambios]($COMMIT_URL)
-
-        🚨 Hubo un error durante el proceso.  
-        Revisar logs para detalles."
-        curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage" \
-          -d chat_id="$TELEGRAM_CHAT" \
-          --data-urlencode "text=$MSG" \
-          -d parse_mode="Markdown" > /dev/null
-#     - name: 📱 Notificar fallo de despliegue a Telegram
-#       if: failure()
-#       uses: appleboy/telegram-action@v1.0.2
-#       with:
-#         to:    ${{ secrets.TELEGRAM_CHAT_ID }}
-#         token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-#         format: html
-#         message: |
-#           ❌ <b>Fallo en el despliegue</b>
-#           • Repositorio: <code>${{ github.repository }}</code>
-#           • Rama: <code>${{ github.ref_name }}</code>
-#           • Commit: <code>${{ github.sha }}</code>
-#           • Autor: <code>${{ github.actor }}</code>
-#           • Fecha: <code>${{ github.event.head_commit.timestamp }}</code>
-#           • <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">Ver pipeline</a>
-#           Se iniciará el proceso de rollback.
-
-#   ###########################################################################
-#   # 2) ROLLBACK (solo si deploy falla)                                      #
-#   ###########################################################################
-#   rollback:
-#     needs: deploy
-#     if: ${{ needs.deploy.result == 'failure' }}
-#     runs-on: ubuntu-24.04
-#     environment: staging
-
-#     steps:
-#     - name: 📱 Notificar inicio de rollback a Telegram
-#       uses: appleboy/telegram-action@v1.0.2
-#       with:
-#         to:    ${{ secrets.TELEGRAM_CHAT_ID }}
-#         token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-#         format: html
-#         message: |
-#           🔄 <b>Inicio de rollback</b>
-#           • Repositorio: <code>${{ github.repository }}</code>
-#           • Rama: <code>${{ github.ref_name }}</code>
-#           • Commit: <code>${{ github.sha }}</code>
-#           • Autor: <code>${{ github.actor }}</code>
-#           • Fecha: <code>${{ github.event.head_commit.timestamp }}</code>
-#           • <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">Ver pipeline</a>
-
-#     - name: 🔄 Restaurar versión anterior
-#       uses: appleboy/ssh-action@v1.2.2
-#       with:
-#         host:     ${{ secrets.SSH_HOST }}
-#         username: ${{ secrets.SSH_USER }}
-#         key:      ${{ secrets.SSH_PRIVATE_KEY }}
-#         port:     ${{ secrets.SSH_PORT }}
-#         script_stop: true
-#         script: |
-#           set -euo pipefail
-#           PROJECT_DIR="/mnt/Data/institucional"
-#           BACKUP_ROOT="/mnt/Data/insti-backups"
-
-#           echo "🔍 Buscando último backup..."
-#           LATEST_BACKUP=$(ls -td "$BACKUP_ROOT"/* | head -1 || true)
-
-#           if [[ -z "$LATEST_BACKUP" ]]; then
-#             echo "❌ No hay backups disponibles"
-#             exit 1
-#           fi
-
-#           echo "📦 Restaurando desde $LATEST_BACKUP"
-
-#           # Limpia proyecto actual excepto volúmenes persistentes
-#           find "$PROJECT_DIR" -mindepth 1 -maxdepth 1 \
-#             ! -name 'db-data' \
-#             ! -name 'certbot' \
-#             -exec rm -rf {} \;
-
-#           # Copia desde backup excluyendo nginx/data* y letsencrypt*
-#           find "$LATEST_BACKUP" -mindepth 1 -maxdepth 1 \
-#             ! -name 'db-data' \
-#             ! -name 'certbot' \
-#             ! -path '*/nginx/data*' \
-#             ! -path '*/nginx/letsencrypt*' \
-#             -exec cp -r {} "$PROJECT_DIR/" \;
-
-#           echo "🔄 Reiniciando servicios..."
-#           cd "$PROJECT_DIR"
-#           docker compose down -v --rmi all || true
-#           docker compose up -d --build
-#           echo "✅ Rollback completado"
-
-#     - name: 📱 Notificar fallo de rollback a Telegram
-#       if: failure()
-#       uses: appleboy/telegram-action@v1.0.2
-#       with:
-#         to:    ${{ secrets.TELEGRAM_CHAT_ID }}
-#         token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-#         format: html
-#         message: |
-#           ❌ <b>Fallo en el rollback</b>
-#           • Repositorio: <code>${{ github.repository }}</code>
-#           • Rama: <code>${{ github.ref_name }}</code>
-#           • Commit: <code>${{ github.sha }}</code>
-#           • Autor: <code>${{ github.actor }}</code>
-#           • Fecha: <code>${{ github.event.head_commit.timestamp }}</code>
-#           • <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">Ver pipeline</a>
