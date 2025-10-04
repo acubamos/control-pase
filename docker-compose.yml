@@ -54,7 +54,6 @@ services:
     networks:
       - control-network
       - proxy
-      - powerdns_powerdns
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.apicp-router.rule=Host(`apicp.acubamos.cu`)"  # Cambia el nombre del router
@@ -85,7 +84,6 @@ services:
     networks:
       - control-network
       - proxy
-      - powerdns_powerdns
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.control.rule=Host(`control.acubamos.cu`)"
