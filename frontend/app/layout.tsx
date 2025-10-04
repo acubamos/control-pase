@@ -11,6 +11,9 @@ export const metadata: Metadata = {
   title: "Sistema de Gestión de Entradas",
   description: "Control de acceso vehicular",
     generator: 'v0.app'
+    icons: {
+      icon: '/favicon.ico',
+    },
 }
 
 export default function RootLayout({

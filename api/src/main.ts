@@ -13,7 +13,7 @@ async function bootstrap() {
       "https://control.acubamos.cu",
       "https://apicp.acubamos.cu"
     ],
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
