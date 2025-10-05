@@ -15,18 +15,29 @@ export function parseQRData(qrText: string): QRData | null {
     const nombreIndex = cleanText.indexOf('N:')
     const apellidosIndex = cleanText.indexOf('A:')
     const ciIndex = cleanText.indexOf('CI:')
+    const fvIndex = cleanText.indexOf('FV:') // 🔥 NUEVO: Buscar FV:
 
-    console.log("🔍 Índices encontrados:", { nombreIndex, apellidosIndex, ciIndex });
+    console.log("🔍 Índices encontrados:", { nombreIndex, apellidosIndex, ciIndex, fvIndex });
 
     if (nombreIndex === -1 || apellidosIndex === -1 || ciIndex === -1) {
       console.warn("❌ No se encontraron todos los prefijos requeridos");
       return null
     }
 
-    // Extraer cada campo
-    const nombre = cleanText.substring(nombreIndex + 2, apellidosIndex).trim()
-    const apellidos = cleanText.substring(apellidosIndex + 2, ciIndex).trim()
-    const ci = cleanText.substring(ciIndex + 3).trim()
+    // 🔥 ACTUALIZADO: Extraer campos manejando FV:
+    let nombre, apellidos, ci;
+
+    if (fvIndex !== -1) {
+      // Si existe FV:, extraer CI hasta FV:
+      nombre = cleanText.substring(nombreIndex + 2, apellidosIndex).trim()
+      apellidos = cleanText.substring(apellidosIndex + 2, ciIndex).trim()
+      ci = cleanText.substring(ciIndex + 3, fvIndex).trim() // 🔥 Hasta FV:
+    } else {
+      // Si no existe FV:, extraer normalmente
+      nombre = cleanText.substring(nombreIndex + 2, apellidosIndex).trim()
+      apellidos = cleanText.substring(apellidosIndex + 2, ciIndex).trim()
+      ci = cleanText.substring(ciIndex + 3).trim()
+    }
 
     console.log("📋 Datos extraídos:", { nombre, apellidos, ci });
 
