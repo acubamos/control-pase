@@ -66,7 +66,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   }, []);
 
   const scanLoop = useCallback(() => {
-    if (!videoRef.current || !canvasRef.current) {
+    if (!videoRef.current || !canvasRef.current || !isScanning) {
       frameRequest.current = requestAnimationFrame(scanLoop);
       return;
     }
@@ -74,7 +74,22 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const context = canvas.getContext("2d", { willReadFrequently: true });
-    if (!context || video.readyState !== video.HAVE_ENOUGH_DATA) {
+
+    if (
+      !context ||
+      video.readyState !== video.HAVE_ENOUGH_DATA ||
+      video.videoWidth === 0
+    ) {
+      frameRequest.current = requestAnimationFrame(scanLoop);
+      return;
+    }
+
+    // Usar un contador separado para el throttling
+    let frameCount = 0;
+    frameCount++;
+
+    // Throttling - procesar cada 3 frames aproximadamente
+    if (frameCount % 3 !== 0) {
       frameRequest.current = requestAnimationFrame(scanLoop);
       return;
     }
@@ -89,17 +104,20 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     });
 
     if (code?.data) {
+      console.log("QR detectado:", code.data);
       const qrData = parseQRData(code.data);
       if (qrData) {
-        alert("QR escaneado correctamente");
+        console.log("QR parseado:", qrData);
         onScan(qrData);
         handleClose();
         return;
+      } else {
+        console.warn("QR no pudo ser parseado. Formato:", code.data);
       }
     }
 
     frameRequest.current = requestAnimationFrame(scanLoop);
-  }, [onScan]);
+  }, [onScan, isScanning]);
 
   const handleClose = () => {
     stopCamera();
