@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Camera, X } from "lucide-react"
 
-export default function QRScanner() {
+export  function QRScanner() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [isOpen, setIsOpen] = useState(false)
@@ -127,3 +127,4 @@ export default function QRScanner() {
     </div>
   )
 }
+
