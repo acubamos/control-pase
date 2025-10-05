@@ -1,50 +1,45 @@
 "use client"
 
-import { useRef, useState, useEffect } from "react"
+import { useEffect, useRef, useState } from "react"
 import jsQR from "jsqr"
-import { parseQRData, type QRData } from "@/lib/qr-scanner" // Ajusta la ruta según tu proyecto
+import { X } from "lucide-react"
+import { parseQRData, type QRData } from "@/lib/qr-acanner"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Camera, X } from "lucide-react"
 
 export default function QRScannerCarnet() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [isOpen, setIsOpen] = useState(false)
-  const [scanning, setScanning] = useState(false)
-  const [qrResult, setQrResult] = useState<QRData | null>(null)
+  const [isScanning, setIsScanning] = useState(false)
+  const [result, setResult] = useState<QRData | null>(null)
 
   useEffect(() => {
     let stream: MediaStream | null = null
     let scanInterval: NodeJS.Timeout
 
-    async function startScanner() {
+    async function startCamera() {
       try {
         const constraints: MediaStreamConstraints = {
           video: {
-            facingMode: "environment", // cámara trasera
+            facingMode: { ideal: "environment" }, // usa cámara trasera en móvil
           },
         }
+
         stream = await navigator.mediaDevices.getUserMedia(constraints)
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream
           await videoRef.current.play()
 
-          setScanning(true)
-          scanInterval = setInterval(() => scanFrame(), 100) // ~10 fps
+          scanInterval = setInterval(scanFrame, 80) // escaneo rápido (~12fps)
         }
-      } catch (error) {
-        console.error("Error al acceder a la cámara:", error)
+      } catch (err) {
+        console.error("Error al activar la cámara:", err)
       }
     }
 
-    function stopScanner() {
-      setScanning(false)
+    function stopCamera() {
       if (scanInterval) clearInterval(scanInterval)
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop())
-      }
+      if (stream) stream.getTracks().forEach((track) => track.stop())
     }
 
     function scanFrame() {
@@ -62,68 +57,74 @@ export default function QRScannerCarnet() {
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
       const code = jsQR(imageData.data, imageData.width, imageData.height)
 
-      if (code && code.data) {
+      if (code?.data) {
         const parsed = parseQRData(code.data)
         if (parsed) {
-          setQrResult(parsed)
-          stopScanner()
-          setIsOpen(false)
+          setResult(parsed)
+          setIsScanning(false)
+          stopCamera()
         }
       }
     }
 
-    if (isOpen) {
-      startScanner()
+    if (isScanning) {
+      startCamera()
+    } else {
+      stopCamera()
     }
 
-    return () => stopScanner()
-  }, [isOpen])
+    return () => stopCamera()
+  }, [isScanning])
 
   return (
-    <div className="space-y-4">
-      <Button onClick={() => setIsOpen(true)} className="gap-2">
-        <Camera size={18} />
+    <>
+      {/* Botón principal */}
+      <Button
+        onClick={() => {
+          setResult(null)
+          setIsScanning(true)
+        }}
+      >
         Escanear carnet
       </Button>
 
-      {/* Resultado */}
-      {qrResult && (
-        <div className="p-4 border rounded-lg bg-gray-50 shadow-sm">
-          <h3 className="font-semibold mb-2">✅ Datos escaneados</h3>
-          <p><strong>Nombre:</strong> {qrResult.nombre}</p>
-          <p><strong>Apellidos:</strong> {qrResult.apellidos}</p>
-          <p><strong>CI:</strong> {qrResult.ci}</p>
+      {/* Resultado escaneado */}
+      {result && (
+        <div className="mt-4 p-4 bg-white border rounded-lg shadow-md max-w-sm">
+          <h3 className="text-lg font-semibold mb-2">✅ Datos detectados</h3>
+          <p><strong>Nombre:</strong> {result.nombre}</p>
+          <p><strong>Apellidos:</strong> {result.apellidos}</p>
+          <p><strong>CI:</strong> {result.ci}</p>
         </div>
       )}
 
-      {/* Modal de escaneo */}
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Escanea el QR del carnet</DialogTitle>
-          </DialogHeader>
-          <div className="relative">
-            <video
-              ref={videoRef}
-              className="w-full rounded-lg"
-              playsInline
-              muted
-            />
-            <canvas ref={canvasRef} className="hidden" />
-            {scanning && (
-              <div className="absolute inset-0 border-4 border-green-500 rounded-lg pointer-events-none animate-pulse" />
-            )}
-            <Button
-              variant="destructive"
-              size="icon"
-              className="absolute top-2 right-2"
-              onClick={() => setIsOpen(false)}
-            >
-              <X />
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+      {/* Overlay estilo WhatsApp/Eventbrite */}
+      {isScanning && (
+        <div className="fixed inset-0 bg-black/90 z-50 flex flex-col items-center justify-center">
+          {/* Botón cerrar */}
+          <button
+            onClick={() => setIsScanning(false)}
+            className="absolute top-5 right-5 bg-white rounded-full p-2 shadow-lg"
+          >
+            <X size={24} />
+          </button>
+
+          {/* Video a pantalla completa */}
+          <video
+            ref={videoRef}
+            className="w-full h-full object-cover absolute inset-0"
+            playsInline
+            muted
+          />
+          <canvas ref={canvasRef} className="hidden" />
+
+          {/* Área de escaneo central */}
+          <div className="absolute w-72 h-72 border-4 border-green-500 rounded-xl animate-pulse scanner-frame" />
+          <p className="absolute bottom-10 text-white text-center text-sm opacity-80">
+            Alinea el código QR del carnet dentro del recuadro
+          </p>
+        </div>
+      )}
+    </>
   )
 }
