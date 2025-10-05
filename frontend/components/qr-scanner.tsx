@@ -9,11 +9,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Camera, X } from "lucide-react";
-import { parseQRData, type QRData } from "@/lib/qr-scanner";
 import jsQR from "jsqr";
 
 interface QRScannerProps {
-  onScan: (data: QRData) => void;
+  onScan: (data: any) => void;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -55,7 +54,9 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         await videoRef.current.play();
       }
 
-      intervalRef.current = setInterval(scanFrame, 150);
+      // Iniciar el escaneo cada 500ms (más lento para debug)
+      intervalRef.current = setInterval(scanFrame, 500);
+      console.log("🔍 Escaneo iniciado - intervalo configurado");
     } catch (err) {
       console.error("Error accessing camera:", err);
       setError(
@@ -76,6 +77,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
+      console.log("🛑 Escaneo detenido - intervalo limpiado");
     }
 
     setIsScanning(false);
@@ -84,50 +86,65 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   };
 
   const scanFrame = () => {
-    if (!videoRef.current || !canvasRef.current || !cameraReady) return;
+    if (!videoRef.current || !canvasRef.current || !cameraReady) {
+      console.log("⏸️  Escaneo pausado - condiciones no cumplidas");
+      return;
+    }
   
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const context = canvas.getContext("2d", { willReadFrequently: true });
   
     const isVideoReady = video.readyState >= video.HAVE_CURRENT_DATA;
-    if (!context || !isVideoReady || video.videoWidth === 0) return;
+    if (!context || !isVideoReady || video.videoWidth === 0) {
+      console.log("⏸️  Video no listo para escanear");
+      return;
+    }
   
     try {
-      const scale = 0.7;
-      canvas.width = video.videoWidth * scale;
-      canvas.height = video.videoHeight * scale;
+      // Configurar canvas con el mismo tamaño que el video
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
   
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
       const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
   
+      console.log("📸 Frame capturado - procesando QR...");
+      
       const code = jsQR(imageData.data, imageData.width, imageData.height, {
         inversionAttempts: "dontInvert",
       });
   
-      if (code && code.data !== lastScannedData) {
-        console.log("🔍 QR detectado:", code.data);
-        setLastScannedData(code.data);
+      if (code) {
+        console.log("🎉 QR DETECTADO:", code.data);
+        console.log("📏 Tamaño QR:", code.width, "x", code.height);
+        console.log("📍 Posición:", code.location);
         
-        // 🔴 DETENER LA CÁMARA INMEDIATAMENTE
-        stopCamera();
-        
-        // 🔔 MOSTRAR ALERT SOLO DE DETECCIÓN
-        alert(`✅ QR DETECTADO EXITOSAMENTE\n\nContenido: ${code.data}`);
-        
-        // Solo llamar onScan para avisar que se detectó
-        // Pero no enviar datos parseados
-        console.log("✅ QR detectado, avisando al padre...");
-        
-        // Enviar datos vacíos o mock para la prueba
-        onScan({
-          nombre: "QR_DETECTADO",
-          apellidos: code.data.substring(0, 10), // primeros 10 chars
-          ci: "TEST_CI"
-        });
+        if (code.data !== lastScannedData) {
+          setLastScannedData(code.data);
+          
+          // DETENER TODO INMEDIATAMENTE
+          stopCamera();
+          
+          // ALERTA DE ÉXITO
+          alert(`✅ QR DETECTADO EXITOSAMENTE!\n\nContenido: ${code.data}`);
+          
+          // ENVIAR AL PADRE - datos simples
+          onScan({
+            nombre: "QR_DETECTADO",
+            apellidos: code.data.substring(0, 20), // primeros 20 chars
+            ci: "FROM_QR_SCAN"
+          });
+          
+          console.log("🚀 Datos enviados al componente padre");
+        } else {
+          console.log("🔁 QR duplicado - ignorando");
+        }
+      } else {
+        console.log("❌ No se detectó QR en este frame");
       }
     } catch (error) {
-      console.error("Error en escaneo:", error);
+      console.error("💥 Error en escaneo:", error);
     }
   };
 
@@ -139,10 +156,9 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   const simulateScan = () => {
     console.log("🎯 Simulando escaneo...");
     
-    // Solo enviar datos de prueba simples
     onScan({
       nombre: "SIMULACION",
-      apellidos: "FUNCIONA",
+      apellidos: "FUNCIONA", 
       ci: "123456789"
     });
     
@@ -151,8 +167,10 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
 
   useEffect(() => {
     if (isOpen) {
+      console.log("🚀 Iniciando cámara y escaneo...");
       startCamera();
     } else {
+      console.log("📴 Deteniendo cámara y escaneo...");
       stopCamera();
     }
 
@@ -167,7 +185,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Camera className="h-5 w-5" />
-            Escanear Código QR
+            Escanear Código QR - DETECCIÓN
           </DialogTitle>
         </DialogHeader>
 
@@ -203,6 +221,9 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
               {cameraReady && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="border-2 border-green-500 border-dashed w-48 h-48 rounded-lg animate-pulse" />
+                  <div className="absolute bottom-2 left-2 bg-green-600 text-white text-xs px-2 py-1 rounded">
+                    Escaneando...
+                  </div>
                 </div>
               )}
             </div>
@@ -217,13 +238,9 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
             </Button>
           </div>
 
-          <p className="text-sm text-gray-600 text-center">
-            Apunta la cámara hacia el código QR de la cédula. Asegúrate de tener buena iluminación y mantener el código dentro del marco.
-          </p>
-          
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-sm text-blue-700 text-center">
-              <strong>Modo prueba:</strong> Solo detección - se mostrará alerta cuando se detecte cualquier QR.
+              <strong>Modo detección:</strong> Abre las herramientas de desarrollo y revisa la consola para ver los logs del escaneo.
             </p>
           </div>
         </div>
