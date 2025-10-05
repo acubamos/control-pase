@@ -6,49 +6,22 @@ export interface QRData {
 
 export function parseQRData(qrText: string): QRData | null {
   try {
-    console.log("Parsing QR text:", qrText) // Debug
-    
-    // Normalizar y limpiar el texto
+    // Normalizar saltos de línea y espacios extra
     const cleanText = qrText.replace(/\r/g, "").trim()
-    
-    // Múltiples patrones posibles
-    const patterns = [
-      // Patrón original
-      { 
-        nombre: /N:([^\n]+)/, 
-        apellidos: /A:([^\n]+)/, 
-        ci: /CI:([^\n]+)/ 
-      },
-      // Patrón con diferentes separadores
-      { 
-        nombre: /Nombre:?([^\n]+)/i, 
-        apellidos: /Apellidos:?([^\n]+)/i, 
-        ci: /(?:CI|Cédula):?([^\n]+)/i 
-      },
-      // Patrón con JSON
-      { 
-        nombre: /"nombre":\s*"([^"]+)"/, 
-        apellidos: /"apellidos":\s*"([^"]+)"/, 
-        ci: /"ci":\s*"([^"]+)"/
-      }
-    ]
 
-    for (const pattern of patterns) {
-      const nombreMatch = cleanText.match(pattern.nombre)
-      const apellidosMatch = cleanText.match(pattern.apellidos)
-      const ciMatch = cleanText.match(pattern.ci)
+    const nombreMatch = cleanText.match(/N:([^\n]+)/)
+    const apellidosMatch = cleanText.match(/A:([^\n]+)/)
+    const ciMatch = cleanText.match(/CI:([^\n]+)/)
 
-      if (nombreMatch && apellidosMatch && ciMatch) {
-        return {
-          nombre: nombreMatch[1].trim(),
-          apellidos: apellidosMatch[1].trim(),
-          ci: ciMatch[1].trim(),
-        }
-      }
+    if (!nombreMatch || !apellidosMatch || !ciMatch) {
+      return null
     }
 
-    console.warn("No se pudo parsear el QR con ningún patrón")
-    return null
+    return {
+      nombre: nombreMatch[1].trim(),
+      apellidos: apellidosMatch[1].trim(),
+      ci: ciMatch[1].trim(),
+    }
   } catch (error) {
     console.error("Error parsing QR data:", error)
     return null
