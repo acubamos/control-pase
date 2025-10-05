@@ -9,11 +9,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Camera, X } from "lucide-react";
-import { parseQRData, type QRData } from "@/lib/qr-scanner";
 import jsQR from "jsqr";
 
 interface QRScannerProps {
-  onScan: (data: QRData) => void;
+  onScan: (data: any) => void;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -23,7 +22,6 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   const [error, setError] = useState<string | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [frameCount, setFrameCount] = useState(0);
-  const [lastScannedData, setLastScannedData] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -36,13 +34,13 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       setIsScanning(true);
       setCameraReady(false);
       setFrameCount(0);
-      setLastScannedData(null);
       isScanningRef.current = false;
 
       const constraints = {
         video: {
           facingMode: "environment",
           width: { ideal: 1280 },
+          aspectRatio: { ideal: 1.777 },
           height: { ideal: 720 }
         },
       };
@@ -58,6 +56,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         videoRef.current.onloadedmetadata = () => {
           console.log("📹 Metadata de video cargada");
           setCameraReady(true);
+          alert("✅ CÁMARA LISTA - El video debería verse ahora");
           
           // Esperar a que el video realmente se reproduzca
           setTimeout(() => {
@@ -89,6 +88,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
 
   const startScanning = () => {
     console.log("🔍 Iniciando proceso de escaneo");
+    alert("🔍 INICIANDO ESCANEO - Debería empezar a procesar frames");
     
     isScanningRef.current = true;
     scanFrame(); // Llamar directamente la primera vez
@@ -103,6 +103,16 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     // Incrementar contador inmediatamente
     setFrameCount(prev => {
       const newCount = prev + 1;
+      
+      // Alertas de debug
+      if (newCount === 1) {
+        alert("🎉 PRIMER FRAME PROCESADO - El escaneo SÍ está funcionando!");
+      } else if (newCount === 3) {
+        alert(`🔄 ${newCount} frames procesados - El escaneo está activo`);
+      } else if (newCount === 5) {
+        alert(`👀 ${newCount} frames - Apunta a un código QR ahora`);
+      }
+      
       return newCount;
     });
 
@@ -149,29 +159,16 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         inversionAttempts: "dontInvert",
       });
 
-      if (code && code.data !== lastScannedData) {
+      if (code) {
         console.log("🎉 QR DETECTADO:", code.data);
-        setLastScannedData(code.data);
-        
-        const qrData = parseQRData(code.data);
-        console.log("📊 Datos parseados:", qrData);
-        
-        if (qrData) {
-          console.log("✅ Enviando datos al padre:", qrData);
-          
-          // DETENER TODO INMEDIATAMENTE
-          stopCamera();
-          
-          // MOSTRAR ALERT 
-          alert(`✅ QR ESCANEADO EXITOSAMENTE\n\nNombre: ${qrData.nombre}\nApellidos: ${qrData.apellidos}\nCI: ${qrData.ci}\n\nLos datos se han cargado en el formulario.`);
-          
-          // LLAMAR onScan DESPUÉS de detener la cámara
-          onScan(qrData);
-        } else {
-          console.warn("❌ QR detectado pero no se pudo parsear:", code.data);
-          alert("❌ CÓDIGO QR NO VÁLIDO\n\nEl formato del código QR no es correcto. Asegúrate de escanear un código QR de cédula válido.");
-          scheduleNextFrame();
-        }
+        alert(`🎉 QR DETECTADO!\nContenido: ${code.data}`);
+        stopCamera();
+        onScan({
+          nombre: "QR_DETECTADO",
+          apellidos: code.data.substring(0, 20),
+          ci: "FROM_QR"
+        });
+        onClose();
       } else {
         console.log(`❌ No se detectó QR en frame ${frameCount + 1}`);
         scheduleNextFrame();
@@ -221,29 +218,18 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   };
 
   const simulateScan = () => {
-    const mockQRText = `N:HASSAN ALEJANDRO
-A:RODRIGUEZ PEREZ
-CI:99032608049`;
-    console.log("🎯 Simulando escaneo con:", mockQRText);
-    
-    const qrData = parseQRData(mockQRText);
-    console.log("📊 Datos parseados de simulación:", qrData);
-    
-    if (qrData) {
-      console.log("✅ Enviando datos simulados al padre:", qrData);
-      
-      // ALERT PARA SIMULACIÓN TAMBIÉN
-      alert(`✅ SIMULACIÓN DE ESCANEO EXITOSA\n\nNombre: ${qrData.nombre}\nApellidos: ${qrData.apellidos}\nCI: ${qrData.ci}\n\nLos datos se han cargado en el formulario.`);
-      
-      onScan(qrData);
-    } else {
-      alert("❌ ERROR EN SIMULACIÓN\n\nNo se pudieron parsear los datos de prueba.");
-    }
+    alert("🎯 SIMULANDO ESCANEO...");
+    onScan({
+      nombre: "SIMULACION", 
+      apellidos: "FUNCIONA", 
+      ci: "123456789"
+    });
+    alert("✅ SIMULACIÓN COMPLETADA");
   };
 
   // Forzar un frame manualmente
   const forceFrame = () => {
-    console.log("🔄 Forzando frame manualmente");
+    alert("🔄 FORZANDO FRAME MANUALMENTE");
     scanFrame();
   };
 
@@ -268,7 +254,7 @@ CI:99032608049`;
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Camera className="h-5 w-5" />
-            Escanear Código QR
+            QR Scanner - TEST FRAMES
           </DialogTitle>
         </DialogHeader>
 
@@ -278,10 +264,10 @@ CI:99032608049`;
               <p className="text-red-600 mb-4">{error}</p>
               <div className="space-y-2">
                 <Button onClick={startCamera} variant="outline" className="w-full">
-                  Intentar de nuevo
+                  Reiniciar Cámara
                 </Button>
                 <Button onClick={simulateScan} variant="outline" className="w-full">
-                  Usar simulación
+                  Simular
                 </Button>
               </div>
             </div>
@@ -295,12 +281,6 @@ CI:99032608049`;
                 autoPlay
               />
               <canvas ref={canvasRef} className="hidden" />
-
-              {isScanning && !cameraReady && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-lg">
-                  <p className="text-white">Iniciando cámara...</p>
-                </div>
-              )}
 
               {cameraReady && (
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -318,7 +298,7 @@ CI:99032608049`;
 
           <div className="grid grid-cols-3 gap-2">
             <Button onClick={simulateScan} variant="outline">
-              Simular Escaneo
+              Simular
             </Button>
             <Button onClick={forceFrame} variant="outline">
               Forzar Frame
@@ -328,18 +308,14 @@ CI:99032608049`;
             </Button>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-sm text-blue-700 text-center">
-              <strong>Estado:</strong> {frameCount > 0 ? `Escaneando (${frameCount} frames)` : "Preparando cámara"}
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+            <p className="text-sm text-yellow-700 text-center">
+              <strong>ESTADO:</strong> {frameCount > 0 ? `ACTIVO (${frameCount} frames)` : "INACTIVO"}
             </p>
-            <p className="text-xs text-blue-600 text-center mt-1">
-              Usa "Forzar Frame" si el escaneo no inicia automáticamente
+            <p className="text-xs text-yellow-600 text-center mt-1">
+              Usa "Forzar Frame" si el contador no aumenta automáticamente
             </p>
           </div>
-
-          <p className="text-sm text-gray-600 text-center">
-            Apunta la cámara hacia el código QR de la cédula. Asegúrate de tener buena iluminación y mantener el código dentro del marco.
-          </p>
         </div>
       </DialogContent>
     </Dialog>
