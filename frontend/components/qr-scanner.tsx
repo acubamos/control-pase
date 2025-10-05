@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Camera, X } from "lucide-react"
 import { parseQRData, type QRData } from "@/lib/qr-scanner"
-import { useToast } from "@/components/ui/use-toast"
 import jsQR from "jsqr"
 
 interface QRScannerProps {
@@ -18,18 +17,14 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [isLoadingCamera, setIsLoadingCamera] = useState(false)
-  const [isScanning, setIsScanning] = useState(false)
   const frameRequest = useRef<number | null>(null)
-  const { toast } = useToast()
 
-  /** 📸 Iniciar cámara */
+  const [error, setError] = useState<string | null>(null)
+  const [isScanning, setIsScanning] = useState(false)
+
   const startCamera = useCallback(async () => {
     try {
       setError(null)
-      setIsLoadingCamera(true)
-
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: "environment" },
@@ -40,7 +35,6 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       })
 
       streamRef.current = stream
-
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         await videoRef.current.play()
@@ -49,13 +43,10 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       }
     } catch (err) {
       console.error(err)
-      setError("No se pudo acceder a la cámara. Verifica los permisos en tu navegador.")
-    } finally {
-      setIsLoadingCamera(false)
+      setError("No se pudo acceder a la cámara. Verifica los permisos.")
     }
   }, [])
 
-  /** 🛑 Detener cámara */
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop())
@@ -68,9 +59,11 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     setIsScanning(false)
   }, [])
 
-  /** 🔁 Bucle de escaneo */
   const scanLoop = useCallback(() => {
-    if (!videoRef.current || !canvasRef.current) return
+    if (!videoRef.current || !canvasRef.current) {
+      frameRequest.current = requestAnimationFrame(scanLoop)
+      return
+    }
 
     const video = videoRef.current
     const canvas = canvasRef.current
@@ -92,12 +85,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     if (code?.data) {
       const qrData = parseQRData(code.data)
       if (qrData) {
-        // ✅ Mostrar toast de éxito
-        toast({
-          title: "✅ Escaneo exitoso",
-          description: `Se leyó correctamente el QR de ${qrData.nombre} ${qrData.apellidos}`,
-          className: "bg-green-600 text-white",
-        })
+        alert("QR escaneado correctamente")
         onScan(qrData)
         handleClose()
         return
@@ -105,31 +93,12 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     }
 
     frameRequest.current = requestAnimationFrame(scanLoop)
-  }, [onScan, toast])
+  }, [onScan])
 
   const handleClose = () => {
     stopCamera()
     onClose()
   }
-
-  /** 🌈 Inyectar la animación CSS */
-  useEffect(() => {
-    const style = document.createElement("style")
-    style.innerHTML = `
-      @keyframes scanLine {
-        0% { transform: translateY(0); opacity: 0.8; }
-        50% { transform: translateY(11rem); opacity: 1; }
-        100% { transform: translateY(0); opacity: 0.8; }
-      }
-      .animate-scan {
-        animation: scanLine 2.5s infinite ease-in-out;
-      }
-    `
-    document.head.appendChild(style)
-    return () => {
-      document.head.removeChild(style)
-    }
-  }, [])
 
   useEffect(() => {
     if (isOpen) {
@@ -171,8 +140,10 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
               {isScanning && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <div className="relative w-48 h-48">
+                    {/* Marco verde animado */}
                     <div className="absolute inset-0 border-2 border-green-500 rounded-lg animate-pulse" />
-                    <div className="absolute inset-x-0 top-0 h-0.5 bg-green-500 animate-scan" />
+                    {/* Línea de escaneo */}
+                    <div className="absolute inset-x-0 top-0 h-0.5 bg-green-500 scan-line" />
                   </div>
                 </div>
               )}
@@ -187,6 +158,26 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
             Apunta la cámara al código QR. Asegúrate de buena iluminación y enfoque.
           </p>
         </div>
+
+        <style jsx>{`
+          @keyframes scanLine {
+            0% {
+              transform: translateY(0);
+              opacity: 0.8;
+            }
+            50% {
+              transform: translateY(11rem);
+              opacity: 1;
+            }
+            100% {
+              transform: translateY(0);
+              opacity: 0.8;
+            }
+          }
+          .scan-line {
+            animation: scanLine 2.5s infinite ease-in-out;
+          }
+        `}</style>
       </DialogContent>
     </Dialog>
   )
