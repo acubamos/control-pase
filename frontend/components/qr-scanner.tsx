@@ -22,64 +22,45 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
-  const [frameCount, setFrameCount] = useState(0);
   const [lastScannedData, setLastScannedData] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isScanningRef = useRef<boolean>(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const startCamera = async () => {
     try {
       setError(null);
       setIsScanning(true);
       setCameraReady(false);
-      setFrameCount(0);
       setLastScannedData(null);
-      isScanningRef.current = false;
 
       const constraints = {
         video: {
           facingMode: "environment",
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
         },
       };
 
-      console.log("📷 Solicitando acceso a cámara...");
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
-      console.log("✅ Cámara accedida");
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         
         videoRef.current.onloadedmetadata = () => {
-          console.log("📹 Metadata de video cargada");
           setCameraReady(true);
-          
-          // Esperar a que el video realmente se reproduzca
-          setTimeout(() => {
-            console.log("🚀 Iniciando escaneo después de delay");
-            startScanning();
-          }, 1000);
-        };
-
-        videoRef.current.onplay = () => {
-          console.log("▶️ Video reproduciéndose");
-        };
-
-        videoRef.current.onerror = (e) => {
-          console.error("❌ Error en video:", e);
         };
         
         await videoRef.current.play();
-        console.log("🎬 Play llamado al video");
       }
 
+      // Iniciar escaneo cada 200ms
+      intervalRef.current = setInterval(scanFrame, 200);
+      
     } catch (err) {
-      console.error("Error accediendo a cámara:", err);
+      console.error("Error accessing camera:", err);
       setError(
         "No se pudo acceder a la cámara. Asegúrate de dar los permisos necesarios y que la cámara esté funcionando."
       );
@@ -87,77 +68,55 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     }
   };
 
-  const startScanning = () => {
-    console.log("🔍 Iniciando proceso de escaneo");
-    
-    isScanningRef.current = true;
-    scanFrame(); // Llamar directamente la primera vez
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => {
+        track.stop();
+      });
+      streamRef.current = null;
+    }
+
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
+    setIsScanning(false);
+    setCameraReady(false);
+    setLastScannedData(null);
   };
 
   const scanFrame = () => {
-    if (!isScanningRef.current) {
-      console.log("⏹️ Escaneo detenido, no procesar frame");
-      return;
-    }
-
-    // Incrementar contador inmediatamente
-    setFrameCount(prev => {
-      const newCount = prev + 1;
-      
-      // Debug cada 10 frames
-      if (newCount % 10 === 0) {
-        console.log(`📊 ${newCount} frames procesados - Buscando QR cédula cubana`);
-      }
-      
-      return newCount;
-    });
-
-    // Verificar condiciones básicas
-    if (!videoRef.current || !canvasRef.current) {
-      scheduleNextFrame();
-      return;
-    }
-
+    if (!videoRef.current || !canvasRef.current || !cameraReady) return;
+  
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const context = canvas.getContext("2d", { willReadFrequently: true });
-
-    if (!context) {
-      scheduleNextFrame();
-      return;
-    }
-
-    // Verificar que el video tenga datos
-    if (video.videoWidth === 0 || video.videoHeight === 0) {
-      scheduleNextFrame();
-      return;
-    }
-
+  
+    const isVideoReady = video.readyState >= video.HAVE_CURRENT_DATA;
+    if (!context || !isVideoReady || video.videoWidth === 0) return;
+  
     try {
-      // Configurar canvas con alta resolución para mejor detección
+      // Usar tamaño completo para mejor detección
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
-
-      // Dibujar frame
+  
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
-      
-      // Obtener image data
       const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-
-      // Intentar detectar QR con configuración optimizada para cédulas cubanas
+  
+      // Configuración optimizada para QR cubanos
       const code = jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: "attemptBoth", // Intentar ambos modos de inversión
-        // Para cédulas cubanas que suelen tener alto contraste
+        inversionAttempts: "attemptBoth",
       });
-
+  
       if (code && code.data !== lastScannedData) {
-        console.log("🎉 QR DETECTADO:", code.data);
+        console.log("🔍 QR detectado:", code.data);
         setLastScannedData(code.data);
         
-        // Verificar si es formato de cédula cubana ANTES de parsear
-        const isCubanCIDFormat = code.data.includes('N:') && code.data.includes('A:') && code.data.includes('CI:');
+        // VERIFICAR SI TIENE EL FORMATO CUBANO (N:, A:, CI:)
+        const hasCubanFormat = code.data.includes('N:') && code.data.includes('A:') && code.data.includes('CI:');
         
-        if (isCubanCIDFormat) {
+        if (hasCubanFormat) {
           console.log("✅ Formato de cédula cubana detectado");
           const qrData = parseQRData(code.data);
           console.log("📊 Datos parseados:", qrData);
@@ -165,7 +124,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
           if (qrData) {
             console.log("✅ Enviando datos al padre:", qrData);
             
-            // DETENER TODO INMEDIATAMENTE
+            // DETENER LA CÁMARA INMEDIATAMENTE
             stopCamera();
             
             // MOSTRAR ALERT 
@@ -175,57 +134,16 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
             onScan(qrData);
           } else {
             console.warn("❌ QR detectado pero no se pudo parsear:", code.data);
-            alert("❌ FORMATO DE CÉDULA NO VÁLIDO\n\nEl código QR se detectó pero no tiene el formato correcto para cédula cubana.");
-            scheduleNextFrame();
+            alert("❌ CÓDIGO QR NO VÁLIDO\n\nEl formato del código QR no es correcto. Asegúrate de escanear un código QR de cédula válido.");
           }
         } else {
-          console.warn("❌ QR detectado pero no es formato de cédula cubana:", code.data);
-          alert("❌ NO ES CÉDULA CUBANA\n\nSe detectó un código QR pero no es de una cédula de identidad cubana.\n\nFormato esperado:\nN:Nombre\nA:Apellidos\nCI:Número");
-          scheduleNextFrame();
+          console.warn("❌ QR detectado pero no es formato cubano:", code.data);
+          alert("❌ NO ES CÉDULA CUBANA\n\nSe detectó un código QR pero no es de una cédula de identidad cubana.");
         }
-      } else {
-        if (frameCount % 20 === 0) {
-          console.log(`🔍 Frame ${frameCount} - Buscando cédula cubana...`);
-        }
-        scheduleNextFrame();
       }
-
     } catch (error) {
-      console.error("💥 Error procesando frame:", error);
-      scheduleNextFrame();
+      console.error("Error en escaneo:", error);
     }
-  };
-
-  const scheduleNextFrame = () => {
-    if (!isScanningRef.current) return;
-
-    // Usar setTimeout recursivo - más rápido para mejor detección
-    timeoutRef.current = setTimeout(() => {
-      scanFrame();
-    }, 100); // 100ms entre frames para mejor respuesta
-  };
-
-  const stopCamera = () => {
-    console.log("🛑 Deteniendo cámara y escaneo");
-    
-    // Detener el loop de escaneo
-    isScanningRef.current = false;
-    
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    
-    // Detener stream de cámara
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => {
-        track.stop();
-      });
-      streamRef.current = null;
-    }
-
-    setIsScanning(false);
-    setCameraReady(false);
   };
 
   const handleClose = () => {
@@ -234,10 +152,13 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   };
 
   const simulateScan = () => {
-    const mockQRText = `N:HASSAN ALEJANDRO
-A:RODRIGUEZ PEREZ
-CI:99032608049`;
-    console.log("🎯 Simulando escaneo de cédula cubana:", mockQRText);
+    // Usar el formato REAL de cédula cubana con FV:
+    const mockQRText = `N:MARIA ISABEL
+A:PEREZ GUILLEN
+CI:61111607936
+FV:ACW631074`;
+    
+    console.log("🎯 Simulando escaneo con formato cubano real:", mockQRText);
     
     const qrData = parseQRData(mockQRText);
     console.log("📊 Datos parseados de simulación:", qrData);
@@ -245,7 +166,6 @@ CI:99032608049`;
     if (qrData) {
       console.log("✅ Enviando datos simulados al padre:", qrData);
       
-      // ALERT PARA SIMULACIÓN TAMBIÉN
       alert(`✅ SIMULACIÓN DE CÉDULA CUBANA\n\nNombre: ${qrData.nombre}\nApellidos: ${qrData.apellidos}\nCI: ${qrData.ci}\n\nLos datos se han cargado en el formulario.`);
       
       onScan(qrData);
@@ -254,38 +174,14 @@ CI:99032608049`;
     }
   };
 
-  // Forzar un frame manualmente
-  const forceFrame = () => {
-    console.log("🔄 Forzando frame manualmente");
-    scanFrame();
-  };
-
-  // Probar con QR de cédula cubana específico
-  const testCubanID = () => {
-    console.log("🇨🇺 Probando con cédula cubana específica");
-    const testQR = `N:JUAN CARLOS
-A:GARCIA PEREZ
-CI:85041512345`;
-    
-    const qrData = parseQRData(testQR);
-    if (qrData) {
-      stopCamera();
-      alert(`🇨🇺 PRUEBA CÉDULA CUBANA\n\nNombre: ${qrData.nombre}\nApellidos: ${qrData.apellidos}\nCI: ${qrData.ci}`);
-      onScan(qrData);
-    }
-  };
-
   useEffect(() => {
     if (isOpen) {
-      console.log("🎬 Modal abierto, iniciando cámara");
       startCamera();
     } else {
-      console.log("📴 Modal cerrado, deteniendo cámara");
       stopCamera();
     }
 
     return () => {
-      console.log("🧹 Cleanup effect");
       stopCamera();
     };
   }, [isOpen]);
@@ -320,7 +216,6 @@ CI:85041512345`;
                 className="w-full h-64 bg-black rounded-lg object-cover"
                 playsInline
                 muted
-                autoPlay
               />
               <canvas ref={canvasRef} className="hidden" />
 
@@ -333,48 +228,29 @@ CI:85041512345`;
               {cameraReady && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="border-2 border-green-500 border-dashed w-48 h-48 rounded-lg animate-pulse" />
-                  <div className="absolute top-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">
-                    Frames: {frameCount}
-                  </div>
-                  <div className="absolute top-2 right-2 bg-green-600 text-white text-xs px-2 py-1 rounded">
-                    {isScanningRef.current ? "Escaneando..." : "Pausado"}
-                  </div>
                 </div>
               )}
             </div>
           )}
 
-          <div className="grid grid-cols-3 gap-2">
-            <Button onClick={simulateScan} variant="outline">
-              Simular
-            </Button>
-            <Button onClick={forceFrame} variant="outline">
-              Forzar Frame
-            </Button>
-            <Button onClick={testCubanID} variant="outline">
-              Test Cédula
-            </Button>
-          </div>
-
           <div className="flex gap-2">
-            <Button onClick={handleClose} variant="outline" className="flex-1">
-              <X className="h-4 w-4 mr-2" />
-              Cerrar
+            <Button onClick={simulateScan} className="flex-1" variant="outline">
+              Simular Escaneo
             </Button>
-          </div>
-
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-sm text-blue-700 text-center">
-              <strong>Escaneando cédula cubana</strong> - {frameCount} frames procesados
-            </p>
-            <p className="text-xs text-blue-600 text-center mt-1">
-              Formato: N:Nombre / A:Apellidos / CI:Número
-            </p>
+            <Button onClick={handleClose} variant="outline" size="icon">
+              <X className="h-4 w-4" />
+            </Button>
           </div>
 
           <p className="text-sm text-gray-600 text-center">
-            Apunta la cámara hacia el código QR de la cédula cubana. Asegúrate de tener buena iluminación.
+            Apunta la cámara hacia el código QR de la cédula cubana. El formato debe contener N:, A: y CI:
           </p>
+          
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-sm text-blue-700 text-center">
+              <strong>Formato esperado:</strong> N:Nombre / A:Apellidos / CI:Número
+            </p>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

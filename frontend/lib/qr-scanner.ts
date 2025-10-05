@@ -15,7 +15,7 @@ export function parseQRData(qrText: string): QRData | null {
     const nombreIndex = cleanText.indexOf('N:')
     const apellidosIndex = cleanText.indexOf('A:')
     const ciIndex = cleanText.indexOf('CI:')
-    const fvIndex = cleanText.indexOf('FV:') // 🔥 NUEVO: Buscar FV:
+    const fvIndex = cleanText.indexOf('FV:') // Buscar FV: también
 
     console.log("🔍 Índices encontrados:", { nombreIndex, apellidosIndex, ciIndex, fvIndex });
 
@@ -24,14 +24,14 @@ export function parseQRData(qrText: string): QRData | null {
       return null
     }
 
-    // 🔥 ACTUALIZADO: Extraer campos manejando FV:
+    // Extraer cada campo manejando FV:
     let nombre, apellidos, ci;
 
     if (fvIndex !== -1) {
       // Si existe FV:, extraer CI hasta FV:
       nombre = cleanText.substring(nombreIndex + 2, apellidosIndex).trim()
       apellidos = cleanText.substring(apellidosIndex + 2, ciIndex).trim()
-      ci = cleanText.substring(ciIndex + 3, fvIndex).trim() // 🔥 Hasta FV:
+      ci = cleanText.substring(ciIndex + 3, fvIndex).trim()
     } else {
       // Si no existe FV:, extraer normalmente
       nombre = cleanText.substring(nombreIndex + 2, apellidosIndex).trim()
