@@ -40,7 +40,6 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         video: {
           facingMode: "environment",
           width: { ideal: 1280 },
-          aspectRatio: { ideal: 1.777 },
           height: { ideal: 720 }
         },
       };
