@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Camera } from "lucide-react"
+import { Camera, X } from "lucide-react"
 import { parseQRData, type QRData } from "@/lib/qr-scanner"
 import jsQR from "jsqr"
 
@@ -16,106 +16,83 @@ interface QRScannerProps {
 export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   const [isScanning, setIsScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [detected, setDetected] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const animationFrameRef = useRef<number | null>(null)
-  const frameCountRef = useRef(0) // para saltar frames
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const startCamera = async () => {
     try {
       setError(null)
       setIsScanning(true)
-      setDetected(false)
 
-      const constraints: MediaStreamConstraints = {
+      const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: { ideal: "environment" },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-          aspectRatio: { ideal: 16 / 9 },
-          focusMode: "continuous" as any,
-          torch: true as any, // algunos navegadores lo ignoran
+          facingMode: "environment",
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
         },
-        audio: false,
-      }
+      })
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints)
       streamRef.current = stream
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         await videoRef.current.play()
-
-        // Intentar activar la linterna si es compatible
-        const track = stream.getVideoTracks()[0]
-        const capabilities = track.getCapabilities?.()
-        if (capabilities && "torch" in capabilities) {
-          await track.applyConstraints({ advanced: [{ torch: true }] }).catch(() => {})
-        }
       }
 
-      animationFrameRef.current = requestAnimationFrame(scanLoop)
+      // Iniciar escaneo cada 100ms para mejor rendimiento
+      intervalRef.current = setInterval(scanFrame, 100)
     } catch (err) {
-      console.error(err)
-      setError("No se pudo acceder a la cámara. Verifica permisos o reinicia el navegador.")
+      setError("No se pudo acceder a la cámara. Asegúrate de dar los permisos necesarios.")
       setIsScanning(false)
     }
   }
 
   const stopCamera = () => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop())
+      streamRef.current.getTracks().forEach((track) => track.stop())
       streamRef.current = null
     }
 
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current)
-      animationFrameRef.current = null
-    }
-
-    if (videoRef.current) {
-      videoRef.current.srcObject = null
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
     }
 
     setIsScanning(false)
-    setDetected(false)
-  }
-
-  const scanLoop = () => {
-    frameCountRef.current++
-    // Escanear solo cada 2 frames → mejora rendimiento móvil
-    if (frameCountRef.current % 2 === 0) {
-      scanFrame()
-    }
-    animationFrameRef.current = requestAnimationFrame(scanLoop)
   }
 
   const scanFrame = () => {
-    if (!videoRef.current || !canvasRef.current || detected) return
+    if (!videoRef.current || !canvasRef.current) return
 
     const video = videoRef.current
     const canvas = canvasRef.current
     const context = canvas.getContext("2d", { willReadFrequently: true })
+
     if (!context || video.readyState !== video.HAVE_ENOUGH_DATA) return
 
+    // Ajustar el tamaño del canvas al video
     canvas.width = video.videoWidth
     canvas.height = video.videoHeight
-
+    
+    // Dibujar el frame actual en el canvas
     context.drawImage(video, 0, 0, canvas.width, canvas.height)
+    
+    // Obtener los datos de la imagen para el escaneo
     const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-
+    
+    // Escanear el código QR
     const code = jsQR(imageData.data, imageData.width, imageData.height, {
-      inversionAttempts: "attemptBoth",
+      inversionAttempts: "dontInvert",
     })
 
     if (code) {
+      // QR detectado, procesar los datos
       const qrData = parseQRData(code.data)
       if (qrData) {
-        setDetected(true)
         onScan(qrData)
-        setTimeout(() => handleClose(), 800) // pequeña pausa para UX
+        handleClose()
       }
     }
   }
@@ -125,13 +102,25 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     onClose()
   }
 
+  const simulateScan = () => {
+    const mockQRText = "N:HASSAN ALEJANDROA:RODRIGUEZ PEREZCI:99032608049"
+    const qrData = parseQRData(mockQRText)
+    if (qrData) {
+      onScan(qrData)
+      handleClose()
+    }
+  }
+
   useEffect(() => {
     if (isOpen) {
       startCamera()
     } else {
       stopCamera()
     }
-    return () => stopCamera()
+
+    return () => {
+      stopCamera()
+    }
   }, [isOpen])
 
   return (
@@ -149,33 +138,38 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
             <div className="text-center py-8">
               <p className="text-red-600 mb-4">{error}</p>
               <Button onClick={startCamera} variant="outline">
-                Reintentar
+                Intentar de nuevo
               </Button>
             </div>
           ) : (
             <div className="relative">
-              <video
-                ref={videoRef}
-                className="w-full h-64 bg-black rounded-lg object-cover"
-                playsInline
-                muted
+              <video 
+                ref={videoRef} 
+                className="w-full h-64 bg-black rounded-lg object-cover" 
+                playsInline 
+                muted 
               />
               <canvas ref={canvasRef} className="hidden" />
+
               {isScanning && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div
-                    className={`border-2 w-48 h-48 rounded-lg transition-all duration-300 ${
-                      detected
-                        ? "border-green-500 animate-ping"
-                        : "border-green-500 border-dashed animate-pulse"
-                    }`}
-                  />
+                  <div className="border-2 border-green-500 border-dashed w-48 h-48 rounded-lg animate-pulse" />
                 </div>
               )}
             </div>
           )}
+
+          <div className="flex gap-2">
+            <Button onClick={simulateScan} className="flex-1" variant="outline">
+              Simular Escaneo (Desarrollo)
+            </Button>
+            <Button onClick={handleClose} variant="outline" size="icon">
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
           <p className="text-sm text-gray-600 text-center">
-            Apunta la cámara hacia el código QR. Asegúrate de tener buena luz y mantén el código centrado.
+            Apunta la cámara hacia el código QR de la cédula. Asegúrate de tener buena iluminación.
           </p>
         </div>
       </DialogContent>
