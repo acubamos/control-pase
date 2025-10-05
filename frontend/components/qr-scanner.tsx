@@ -9,8 +9,61 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Camera, X } from "lucide-react";
-import { parseQRData, type QRData } from "@/lib/qr-scanner";
 import jsQR from "jsqr";
+
+// Interface y función parseQRData integradas en el mismo componente
+export interface QRData {
+  nombre: string;
+  apellidos: string;
+  ci: string;
+}
+
+function parseQRData(qrText: string): QRData | null {
+  try {
+    console.log("📝 Texto QR recibido para parsing:", qrText);
+    
+    const cleanText = qrText.replace(/\r/g, "").trim();
+    console.log("🧹 Texto limpio:", cleanText);
+    
+    // Buscar los índices de los prefijos
+    const nombreIndex = cleanText.indexOf('N:');
+    const apellidosIndex = cleanText.indexOf('A:');
+    const ciIndex = cleanText.indexOf('CI:');
+
+    console.log("🔍 Índices encontrados:", { nombreIndex, apellidosIndex, ciIndex });
+
+    if (nombreIndex === -1 || apellidosIndex === -1 || ciIndex === -1) {
+      console.warn("❌ No se encontraron todos los prefijos requeridos");
+      return null;
+    }
+
+    // Extraer cada campo
+    const nombre = cleanText.substring(nombreIndex + 2, apellidosIndex).trim();
+    const apellidos = cleanText.substring(apellidosIndex + 2, ciIndex).trim();
+    const ci = cleanText.substring(ciIndex + 3).trim();
+
+    console.log("📋 Datos extraídos:", { nombre, apellidos, ci });
+
+    // Validar que los campos no estén vacíos
+    if (!nombre || !apellidos || !ci) {
+      console.warn("❌ Campos vacíos detectados");
+      return null;
+    }
+
+    const result = {
+      nombre,
+      apellidos,
+      ci,
+    };
+
+    console.log("✅ Datos parseados exitosamente:", result);
+    return result;
+
+  } catch (error) {
+    console.error("❌ Error parsing QR data:", error);
+    return null;
+  }
+}
 
 interface QRScannerProps {
   onScan: (data: QRData) => void;
@@ -34,7 +87,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       setIsScanning(true);
       setCameraReady(false);
       setLastScannedData(null);
-  
+
       // CONFIGURACIÓN OPTIMIZADA PARA QR
       const constraints = {
         video: {
@@ -45,10 +98,10 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
           frameRate: { ideal: 30 }  // Mayor frame rate
         },
       };
-  
+
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
-  
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         
@@ -58,7 +111,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         
         await videoRef.current.play();
       }
-  
+
       // AUMENTAR FRECUENCIA DE ESCANEO
       intervalRef.current = setInterval(scanFrame, 250); // 4 escaneos/segundo
     } catch (err) {
@@ -245,3 +298,6 @@ CI:99032608049`;
     </Dialog>
   );
 }
+
+// Exportar también la interfaz y función por separado por si se necesitan en otros componentes
+export { parseQRData };
