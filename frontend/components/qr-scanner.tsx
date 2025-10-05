@@ -1,30 +1,35 @@
-"use client"
+"use client";
 
-import { useState, useRef, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Camera, X } from "lucide-react"
-import { parseQRData, type QRData } from "@/lib/qr-scanner"
-import jsQR from "jsqr"
+import { useState, useRef, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Camera, X } from "lucide-react";
+import { parseQRData, type QRData } from "@/lib/qr-scanner";
+import jsQR from "jsqr";
 
 interface QRScannerProps {
-  onScan: (data: QRData) => void
-  isOpen: boolean
-  onClose: () => void
+  onScan: (data: QRData) => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
-  const [isScanning, setIsScanning] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const [isScanning, setIsScanning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const startCamera = async () => {
     try {
-      setError(null)
-      setIsScanning(true)
+      setError(null);
+      setIsScanning(true);
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -32,96 +37,100 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
           width: { ideal: 1280 },
           height: { ideal: 720 },
         },
-      })
+      });
 
-      streamRef.current = stream
+      streamRef.current = stream;
 
       if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
       }
 
       // Iniciar escaneo cada 100ms para mejor rendimiento
-      intervalRef.current = setInterval(scanFrame, 100)
+      intervalRef.current = setInterval(scanFrame, 100);
     } catch (err) {
-      setError("No se pudo acceder a la cámara. Asegúrate de dar los permisos necesarios.")
-      setIsScanning(false)
+      setError(
+        "No se pudo acceder a la cámara. Asegúrate de dar los permisos necesarios."
+      );
+      setIsScanning(false);
     }
-  }
+  };
 
   const stopCamera = () => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop())
-      streamRef.current = null
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     }
 
     if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = null
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
 
-    setIsScanning(false)
-  }
+    setIsScanning(false);
+  };
 
   const scanFrame = () => {
-    if (!videoRef.current || !canvasRef.current) return
+    if (!videoRef.current || !canvasRef.current) return;
 
-    const video = videoRef.current
-    const canvas = canvasRef.current
-    const context = canvas.getContext("2d", { willReadFrequently: true })
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
 
-    if (!context || video.readyState !== video.HAVE_ENOUGH_DATA) return
+    if (!context || video.readyState !== video.HAVE_ENOUGH_DATA) return;
 
     // Ajustar el tamaño del canvas al video
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
     // Dibujar el frame actual en el canvas
-    context.drawImage(video, 0, 0, canvas.width, canvas.height)
-    
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
     // Obtener los datos de la imagen para el escaneo
-    const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-    
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+
     // Escanear el código QR
     const code = jsQR(imageData.data, imageData.width, imageData.height, {
       inversionAttempts: "dontInvert",
-    })
+    });
 
     if (code) {
       // QR detectado, procesar los datos
-      const qrData = parseQRData(code.data)
+      const qrData = parseQRData(code.data);
       if (qrData) {
-        onScan(qrData)
-        handleClose()
+        onScan(qrData);
+        handleClose();
       }
     }
-  }
+  };
 
   const handleClose = () => {
-    stopCamera()
-    onClose()
-  }
+    stopCamera();
+    onClose();
+  };
 
   const simulateScan = () => {
-    const mockQRText = "N:HASSAN ALEJANDROA:RODRIGUEZ PEREZCI:99032608049"
-    const qrData = parseQRData(mockQRText)
+    const mockQRText = `N:HASSAN ALEJANDRO
+A:RODRIGUEZ PEREZ
+CI:99032608049`;
+    const qrData = parseQRData(mockQRText);
     if (qrData) {
-      onScan(qrData)
-      handleClose()
+      onScan(qrData);
+      handleClose();
     }
-  }
+  };
 
   useEffect(() => {
     if (isOpen) {
-      startCamera()
+      startCamera();
     } else {
-      stopCamera()
+      stopCamera();
     }
 
     return () => {
-      stopCamera()
-    }
-  }, [isOpen])
+      stopCamera();
+    };
+  }, [isOpen]);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -143,11 +152,11 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
             </div>
           ) : (
             <div className="relative">
-              <video 
-                ref={videoRef} 
-                className="w-full h-64 bg-black rounded-lg object-cover" 
-                playsInline 
-                muted 
+              <video
+                ref={videoRef}
+                className="w-full h-64 bg-black rounded-lg object-cover"
+                playsInline
+                muted
               />
               <canvas ref={canvasRef} className="hidden" />
 
@@ -169,10 +178,11 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
           </div>
 
           <p className="text-sm text-gray-600 text-center">
-            Apunta la cámara hacia el código QR de la cédula. Asegúrate de tener buena iluminación.
+            Apunta la cámara hacia el código QR de la cédula. Asegúrate de tener
+            buena iluminación.
           </p>
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
