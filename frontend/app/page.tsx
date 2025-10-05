@@ -8,17 +8,17 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "../components/ui/dialog";
+} from "@/components/ui/dialog";
 import { useState, useEffect, useCallback } from "react";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Badge } from "../components/ui/badge";
-import { Separator } from "../components/ui/separator";
-import { Checkbox } from "../components/ui/checkbox";
-import { toast } from "../hooks/use-toast";
-import { Toaster } from "../components/ui/toaster";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "@/hooks/use-toast";
+import { Toaster } from "@/components/ui/toaster";
 import {
   Plus,
   History,
@@ -34,12 +34,12 @@ import {
   AlertCircle,
   LogOut,
 } from "lucide-react";
-import { LoginForm } from "../components/login-form";
-import { UserMenu } from "../components/user-menu";
-import { HistoryView } from "../components/history-view";
-import { QRScanner } from "../components/qr-scanner";
-import { PhotoCapture } from "../components/photo-capture";
-import { authService } from "../lib/auth-service";
+import { LoginForm } from "@/components/login-form";
+import { UserMenu } from "@/components/user-menu";
+import { HistoryView } from "@/components/history-view";
+import { QRScanner } from "@/components/qr-scanner";
+import { PhotoCapture } from "@/components/photo-capture";
+import { authService } from "@/lib/auth-service";
 import {
   apiService,
   type VehicleEntry,
