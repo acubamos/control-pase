@@ -22,7 +22,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   const [isScanning, setIsScanning] = useState(false)
   const frameRequest = useRef<number | null>(null)
 
-  /** 📸 Iniciar cámara */
+  /** 📸 Iniciar cámara con optimizaciones estilo PWA */
   const startCamera = useCallback(async () => {
     try {
       setError(null)
@@ -53,7 +53,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     }
   }, [])
 
-  /** 🛑 Detener cámara */
+  /** 🛑 Detener cámara y bucles */
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop())
@@ -66,7 +66,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     setIsScanning(false)
   }, [])
 
-  /** 🔁 Bucle de escaneo */
+  /** 🔁 Bucle continuo de escaneo (como WhatsApp) */
   const scanLoop = useCallback(() => {
     if (!videoRef.current || !canvasRef.current) return
 
@@ -104,31 +104,13 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     onClose()
   }
 
-  /** 🌈 Inyectar la animación CSS al montar el componente */
-  useEffect(() => {
-    const style = document.createElement("style")
-    style.innerHTML = `
-      @keyframes scanLine {
-        0% { transform: translateY(0); opacity: 0.8; }
-        50% { transform: translateY(11rem); opacity: 1; }
-        100% { transform: translateY(0); opacity: 0.8; }
-      }
-      .animate-scan {
-        animation: scanLine 2.5s infinite ease-in-out;
-      }
-    `
-    document.head.appendChild(style)
-    return () => {
-      document.head.removeChild(style)
-    }
-  }, [])
-
   useEffect(() => {
     if (isOpen) {
       startCamera()
     } else {
       stopCamera()
     }
+
     return () => stopCamera()
   }, [isOpen, startCamera, stopCamera])
 
@@ -162,6 +144,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
 
               {isScanning && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  {/* Marco animado estilo WhatsApp */}
                   <div className="relative w-48 h-48">
                     <div className="absolute inset-0 border-2 border-green-500 rounded-lg animate-pulse" />
                     <div className="absolute inset-x-0 top-0 h-0.5 bg-green-500 animate-scan" />
@@ -183,3 +166,17 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     </Dialog>
   )
 }
+
+// /** 🟩 Animación tipo “línea de escaneo” */
+// const style = document.createElement("style")
+// style.innerHTML = `
+// @keyframes scanLine {
+//   0% { transform: translateY(0); opacity: 0.8; }
+//   50% { transform: translateY(11rem); opacity: 1; }
+//   100% { transform: translateY(0); opacity: 0.8; }
+// }
+// .animate-scan {
+//   animation: scanLine 2.5s infinite ease-in-out;
+// }
+// `
+// document.head.appendChild(style)
