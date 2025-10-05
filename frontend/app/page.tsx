@@ -44,8 +44,8 @@ import {
   apiService,
   type VehicleEntry,
   type CreateVehicleEntry,
-} from "../lib/api-services";
-import type { QRData } from "../lib/qr-scanner";
+} from "@/lib/api-services";
+import type { QRData } from "@/lib/qr-scanner";
 
 const VEHICLE_TYPES = ["Carro", "Moto", "Camión", "Camioneta", "Bus", "N/A"];
 
