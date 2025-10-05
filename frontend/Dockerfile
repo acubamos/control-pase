@@ -21,7 +21,7 @@ ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 COPY package.json pnpm-lock.yaml ./
 
 # 2. Instalar dependencias con --frozen-lockfile para garantizar consistencia
-RUN pnpm install --frozen-lockfile && \
+RUN pnpm install --no-frozen-lockfile && \
     pnpm prune --prod
 
 # 3. Copiar el resto del código fuente
