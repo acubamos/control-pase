@@ -22,6 +22,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
+  const [lastScannedData, setLastScannedData] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -32,12 +33,12 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       setError(null);
       setIsScanning(true);
       setCameraReady(false);
+      setLastScannedData(null);
 
-      // Configuración más flexible de cámara
       const constraints = {
         video: {
           facingMode: "environment",
-          aspectRatio: { ideal: 1.777 }, // 16:9
+          aspectRatio: { ideal: 1.777 },
         },
       };
 
@@ -47,7 +48,6 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         
-        // Esperar a que el video esté listo
         videoRef.current.onloadedmetadata = () => {
           setCameraReady(true);
         };
@@ -55,7 +55,6 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         await videoRef.current.play();
       }
 
-      // Escaneo menos frecuente para mejor rendimiento
       intervalRef.current = setInterval(scanFrame, 500);
     } catch (err) {
       console.error("Error accessing camera:", err);
@@ -81,6 +80,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
 
     setIsScanning(false);
     setCameraReady(false);
+    setLastScannedData(null);
   };
 
   const scanFrame = () => {
@@ -90,12 +90,10 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     const canvas = canvasRef.current;
     const context = canvas.getContext("2d", { willReadFrequently: true });
 
-    // Verificación más robusta del estado del video
     const isVideoReady = video.readyState >= video.HAVE_CURRENT_DATA;
     if (!context || !isVideoReady || video.videoWidth === 0) return;
 
     try {
-      // Reducir tamaño para mejor rendimiento
       const scale = 0.7;
       canvas.width = video.videoWidth * scale;
       canvas.height = video.videoHeight * scale;
@@ -107,15 +105,19 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         inversionAttempts: "dontInvert",
       });
 
-      if (code) {
-        console.log("QR detectado:", code.data);
+      if (code && code.data !== lastScannedData) {
+        console.log("🔍 QR detectado:", code.data);
+        setLastScannedData(code.data); // Prevenir escaneos duplicados
+        
         const qrData = parseQRData(code.data);
+        console.log("📊 Datos parseados:", qrData);
         
         if (qrData) {
+          console.log("✅ Enviando datos al padre:", qrData);
           onScan(qrData);
-          handleClose();
+          // NO cerrar inmediatamente - dejar que el padre maneje el cierre
         } else {
-          console.warn("QR detectado pero no se pudo parsear:", code.data);
+          console.warn("❌ QR detectado pero no se pudo parsear:", code.data);
         }
       }
     } catch (error) {
@@ -132,10 +134,14 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     const mockQRText = `N:HASSAN ALEJANDRO
 A:RODRIGUEZ PEREZ
 CI:99032608049`;
+    console.log("🎯 Simulando escaneo con:", mockQRText);
+    
     const qrData = parseQRData(mockQRText);
+    console.log("📊 Datos parseados de simulación:", qrData);
+    
     if (qrData) {
+      console.log("✅ Enviando datos simulados al padre:", qrData);
       onScan(qrData);
-      handleClose();
     }
   };
 
@@ -168,10 +174,7 @@ CI:99032608049`;
               <div className="space-y-2">
                 <Button onClick={startCamera} variant="outline" className="w-full">
                   Intentar de nuevo
-                </Button>
-                <Button onClick={simulateScan} variant="outline" className="w-full">
-                  Usar simulación
-                </Button>
+                </Button>               
               </div>
             </div>
           ) : (
