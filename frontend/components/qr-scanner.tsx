@@ -114,10 +114,16 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         
         if (qrData) {
           console.log("✅ Enviando datos al padre:", qrData);
+          
+          // 🔔 MOSTRAR ALERT CUANDO SE DETECTA EL QR
+          alert(`✅ QR ESCANEADO EXITOSAMENTE\n\nNombre: ${qrData.nombre}\nApellidos: ${qrData.apellidos}\nCI: ${qrData.ci}\n\nLos datos se han cargado en el formulario.`);
+          
           onScan(qrData);
           // NO cerrar inmediatamente - dejar que el padre maneje el cierre
         } else {
           console.warn("❌ QR detectado pero no se pudo parsear:", code.data);
+          // 🔔 ALERT PARA QR NO VÁLIDO
+          alert("❌ CÓDIGO QR NO VÁLIDO\n\nEl formato del código QR no es correcto. Asegúrate de escanear un código QR de cédula válido.");
         }
       }
     } catch (error) {
@@ -141,7 +147,13 @@ CI:99032608049`;
     
     if (qrData) {
       console.log("✅ Enviando datos simulados al padre:", qrData);
+      
+      // 🔔 ALERT PARA SIMULACIÓN TAMBIÉN
+      alert(`✅ SIMULACIÓN DE ESCANEO EXITOSA\n\nNombre: ${qrData.nombre}\nApellidos: ${qrData.apellidos}\nCI: ${qrData.ci}\n\nLos datos se han cargado en el formulario.`);
+      
       onScan(qrData);
+    } else {
+      alert("❌ ERROR EN SIMULACIÓN\n\nNo se pudieron parsear los datos de prueba.");
     }
   };
 
@@ -174,7 +186,10 @@ CI:99032608049`;
               <div className="space-y-2">
                 <Button onClick={startCamera} variant="outline" className="w-full">
                   Intentar de nuevo
-                </Button>               
+                </Button>
+                <Button onClick={simulateScan} variant="outline" className="w-full">
+                  Usar simulación
+                </Button>
               </div>
             </div>
           ) : (
@@ -213,6 +228,13 @@ CI:99032608049`;
           <p className="text-sm text-gray-600 text-center">
             Apunta la cámara hacia el código QR de la cédula. Asegúrate de tener buena iluminación y mantener el código dentro del marco.
           </p>
+          
+          {/* 🔔 Indicador visual de que se mostrará un alert */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-sm text-blue-700 text-center">
+              <strong>Nota:</strong> Se mostrará una alerta cuando el QR sea detectado exitosamente.
+            </p>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
