@@ -252,27 +252,26 @@ export default function VehicleEntrySystem() {
   const handleQRScan = (qrData: QRData) => {
     console.log("👨‍👦‍👦 Padre recibió datos QR:", qrData);
     
-    // Usar un timeout para asegurar la actualización del estado
+    // Actualizar el estado inmediatamente sin timeout
+    setFormData((prev) => {
+      const newData = {
+        ...prev,
+        nombre: qrData.nombre,
+        apellidos: qrData.apellidos,
+        ci: qrData.ci,
+      };
+      console.log("🔄 Nuevo estado del formulario:", newData);
+      return newData;
+    });
+    
+    // Cerrar el modal después de una pequeña pausa para asegurar la actualización
     setTimeout(() => {
-      setFormData((prev) => {
-        const newData = {
-          ...prev,
-          nombre: qrData.nombre,
-          apellidos: qrData.apellidos,
-          ci: qrData.ci,
-        };
-        console.log("🔄 Nuevo estado del formulario:", newData);
-        return newData;
-      });
-      
-      // Cerrar el modal después de actualizar el estado
       setShowQRScanner(false);
-      
       toast({
         title: "QR Escaneado",
         description: "Datos cargados desde el código QR",
       });
-    }, 100);
+    }, 300);
   };
 
   const handleVehicleTypeChange = (type: string, checked: boolean) => {
