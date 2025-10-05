@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/dialog";
 import { Camera, X } from "lucide-react";
 import { parseQRData, type QRData } from "@/lib/qr-scanner";
-import jsQR from "jsqr";
 
 interface QRScannerProps {
   onScan: (data: QRData) => void;
@@ -22,18 +21,34 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
-  const [lastScannedData, setLastScannedData] = useState<string | null>(null);
+  const [usingNativeAPI, setUsingNativeAPI] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const barcodeDetectorRef = useRef<any>(null);
 
   const startCamera = async () => {
     try {
       setError(null);
       setIsScanning(true);
       setCameraReady(false);
-      setLastScannedData(null);
+
+      // PRIMERO: Verificar si el navegador soporta BarcodeDetector nativo
+      if ('BarcodeDetector' in window) {
+        console.log("✅ Navegador soporta BarcodeDetector nativo");
+        setUsingNativeAPI(true);
+        
+        // @ts-ignore
+        barcodeDetectorRef.current = new BarcodeDetector({
+          formats: ['qr_code', 'datamatrix'] // Incluir DataMatrix por si acaso
+        });
+        
+        alert("🔍 Usando detector nativo de QR/DataMatrix");
+      } else {
+        console.log("❌ Navegador NO soporta BarcodeDetector, necesitamos alternativa");
+        setUsingNativeAPI(false);
+        alert("❌ Tu navegador no soporta escaneo nativo. Usa Chrome o Edge.");
+        return;
+      }
 
       const constraints = {
         video: {
@@ -51,14 +66,13 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         
         videoRef.current.onloadedmetadata = () => {
           setCameraReady(true);
+          // Iniciar escaneo inmediatamente
+          startNativeScanning();
         };
         
         await videoRef.current.play();
       }
 
-      // Iniciar escaneo cada 200ms
-      intervalRef.current = setInterval(scanFrame, 200);
-      
     } catch (err) {
       console.error("Error accessing camera:", err);
       setError(
@@ -66,6 +80,55 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       );
       setIsScanning(false);
     }
+  };
+
+  const startNativeScanning = async () => {
+    if (!barcodeDetectorRef.current || !videoRef.current) return;
+
+    console.log("🔍 Iniciando escaneo con API nativa...");
+    
+    const detectBarcode = async () => {
+      if (!barcodeDetectorRef.current || !videoRef.current || !isScanning) return;
+
+      try {
+        const barcodes = await barcodeDetectorRef.current.detect(videoRef.current);
+        
+        if (barcodes.length > 0) {
+          const barcode = barcodes[0];
+          console.log("🎉 Código detectado:", barcode);
+          console.log("📝 Contenido:", barcode.rawValue);
+          console.log("🔤 Formato:", barcode.format);
+          
+          // Verificar si es formato cubano
+          if (barcode.rawValue.includes('N:') && barcode.rawValue.includes('A:') && barcode.rawValue.includes('CI:')) {
+            console.log("✅ Formato de cédula cubana detectado");
+            const qrData = parseQRData(barcode.rawValue);
+            
+            if (qrData) {
+              stopCamera();
+              alert(`✅ CÉDULA DETECTADA (${barcode.format})\n\nNombre: ${qrData.nombre}\nApellidos: ${qrData.apellidos}\nCI: ${qrData.ci}`);
+              onScan(qrData);
+              return;
+            }
+          } else {
+            console.log("❌ Formato no reconocido:", barcode.rawValue);
+            alert(`❌ CÓDIGO DETECTADO PERO NO ES CÉDULA\n\nFormato: ${barcode.format}\nContenido: ${barcode.rawValue}`);
+          }
+        }
+        
+        // Continuar escaneo
+        if (isScanning) {
+          requestAnimationFrame(detectBarcode);
+        }
+      } catch (error) {
+        console.error("Error en detección:", error);
+        if (isScanning) {
+          setTimeout(detectBarcode, 100);
+        }
+      }
+    };
+
+    detectBarcode();
   };
 
   const stopCamera = () => {
@@ -76,74 +139,8 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       streamRef.current = null;
     }
 
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-
     setIsScanning(false);
     setCameraReady(false);
-    setLastScannedData(null);
-  };
-
-  const scanFrame = () => {
-    if (!videoRef.current || !canvasRef.current || !cameraReady) return;
-  
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const context = canvas.getContext("2d", { willReadFrequently: true });
-  
-    const isVideoReady = video.readyState >= video.HAVE_CURRENT_DATA;
-    if (!context || !isVideoReady || video.videoWidth === 0) return;
-  
-    try {
-      // Usar tamaño completo para mejor detección
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-  
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-  
-      // Configuración optimizada para QR cubanos
-      const code = jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: "attemptBoth",
-      });
-  
-      if (code && code.data !== lastScannedData) {
-        console.log("🔍 QR detectado:", code.data);
-        setLastScannedData(code.data);
-        
-        // VERIFICAR SI TIENE EL FORMATO CUBANO (N:, A:, CI:)
-        const hasCubanFormat = code.data.includes('N:') && code.data.includes('A:') && code.data.includes('CI:');
-        
-        if (hasCubanFormat) {
-          console.log("✅ Formato de cédula cubana detectado");
-          const qrData = parseQRData(code.data);
-          console.log("📊 Datos parseados:", qrData);
-          
-          if (qrData) {
-            console.log("✅ Enviando datos al padre:", qrData);
-            
-            // DETENER LA CÁMARA INMEDIATAMENTE
-            stopCamera();
-            
-            // MOSTRAR ALERT 
-            alert(`✅ CÉDULA CUBANA ESCANEADA\n\nNombre: ${qrData.nombre}\nApellidos: ${qrData.apellidos}\nCI: ${qrData.ci}\n\nLos datos se han cargado en el formulario.`);
-            
-            // LLAMAR onScan DESPUÉS de detener la cámara
-            onScan(qrData);
-          } else {
-            console.warn("❌ QR detectado pero no se pudo parsear:", code.data);
-            alert("❌ CÓDIGO QR NO VÁLIDO\n\nEl formato del código QR no es correcto. Asegúrate de escanear un código QR de cédula válido.");
-          }
-        } else {
-          console.warn("❌ QR detectado pero no es formato cubano:", code.data);
-          alert("❌ NO ES CÉDULA CUBANA\n\nSe detectó un código QR pero no es de una cédula de identidad cubana.");
-        }
-      }
-    } catch (error) {
-      console.error("Error en escaneo:", error);
-    }
   };
 
   const handleClose = () => {
@@ -152,26 +149,63 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   };
 
   const simulateScan = () => {
-    // Usar el formato REAL de cédula cubana con FV:
     const mockQRText = `N:MARIA ISABEL
 A:PEREZ GUILLEN
 CI:61111607936
 FV:ACW631074`;
     
-    console.log("🎯 Simulando escaneo con formato cubano real:", mockQRText);
+    console.log("🎯 Simulando escaneo:", mockQRText);
     
     const qrData = parseQRData(mockQRText);
-    console.log("📊 Datos parseados de simulación:", qrData);
     
     if (qrData) {
-      console.log("✅ Enviando datos simulados al padre:", qrData);
-      
-      alert(`✅ SIMULACIÓN DE CÉDULA CUBANA\n\nNombre: ${qrData.nombre}\nApellidos: ${qrData.apellidos}\nCI: ${qrData.ci}\n\nLos datos se han cargado en el formulario.`);
-      
+      alert(`✅ SIMULACIÓN EXITOSA\n\nNombre: ${qrData.nombre}\nApellidos: ${qrData.apellidos}\nCI: ${qrData.ci}`);
       onScan(qrData);
     } else {
-      alert("❌ ERROR EN SIMULACIÓN\n\nNo se pudieron parsear los datos de prueba.");
+      alert("❌ ERROR EN SIMULACIÓN");
     }
+  };
+
+  // Alternativa: Usar input de archivo para subir imagen del QR
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const image = new Image();
+      image.onload = async () => {
+        try {
+          if ('BarcodeDetector' in window) {
+            // @ts-ignore
+            const detector = new BarcodeDetector({ formats: ['qr_code', 'datamatrix'] });
+            const barcodes = await detector.detect(image);
+            
+            if (barcodes.length > 0) {
+              const barcode = barcodes[0];
+              console.log("📸 QR de imagen detectado:", barcode.rawValue);
+              
+              if (barcode.rawValue.includes('N:') && barcode.rawValue.includes('A:') && barcode.rawValue.includes('CI:')) {
+                const qrData = parseQRData(barcode.rawValue);
+                if (qrData) {
+                  alert(`✅ CÉDULA DESDE IMAGEN\n\nNombre: ${qrData.nombre}\nApellidos: ${qrData.apellidos}\nCI: ${qrData.ci}`);
+                  onScan(qrData);
+                }
+              } else {
+                alert(`❌ NO ES CÉDULA\nContenido: ${barcode.rawValue}`);
+              }
+            } else {
+              alert("❌ No se detectó código QR en la imagen");
+            }
+          }
+        } catch (error) {
+          console.error("Error procesando imagen:", error);
+          alert("❌ Error procesando la imagen");
+        }
+      };
+      image.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
   };
 
   useEffect(() => {
@@ -192,7 +226,7 @@ FV:ACW631074`;
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Camera className="h-5 w-5" />
-            Escanear Cédula Cubana
+            {usingNativeAPI ? "Escanear Cédula (API Nativa)" : "Escanear Cédula"}
           </DialogTitle>
         </DialogHeader>
 
@@ -208,6 +242,19 @@ FV:ACW631074`;
                   Usar simulación
                 </Button>
               </div>
+              
+              {/* Alternativa: Subir imagen */}
+              <div className="mt-4">
+                <label className="block text-sm font-medium mb-2">
+                  O sube una foto del QR:
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileUpload}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+              </div>
             </div>
           ) : (
             <div className="relative">
@@ -217,7 +264,6 @@ FV:ACW631074`;
                 playsInline
                 muted
               />
-              <canvas ref={canvasRef} className="hidden" />
 
               {isScanning && !cameraReady && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-lg">
@@ -228,6 +274,9 @@ FV:ACW631074`;
               {cameraReady && (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="border-2 border-green-500 border-dashed w-48 h-48 rounded-lg animate-pulse" />
+                  <div className="absolute bottom-2 left-2 bg-green-600 text-white text-xs px-2 py-1 rounded">
+                    {usingNativeAPI ? "Escaneando..." : "Preparando..."}
+                  </div>
                 </div>
               )}
             </div>
@@ -242,14 +291,28 @@ FV:ACW631074`;
             </Button>
           </div>
 
-          <p className="text-sm text-gray-600 text-center">
-            Apunta la cámara hacia el código QR de la cédula cubana. El formato debe contener N:, A: y CI:
-          </p>
-          
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-sm text-blue-700 text-center">
-              <strong>Formato esperado:</strong> N:Nombre / A:Apellidos / CI:Número
+              <strong>Usando {usingNativeAPI ? "API Nativa" : "jsQR"}</strong>
             </p>
+            <p className="text-xs text-blue-600 text-center mt-1">
+              {usingNativeAPI 
+                ? "Chrome/Edge - Detecta QR y DataMatrix" 
+                : "Necesita Chrome/Edge para mejor detección"}
+            </p>
+          </div>
+
+          {/* Alternativa de subir imagen siempre visible */}
+          <div className="border-t pt-4">
+            <label className="block text-sm font-medium mb-2 text-center">
+              ¿Problemas con la cámara?
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFileUpload}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-gray-50 file:text-gray-700 hover:file:bg-gray-100"
+            />
           </div>
         </div>
       </DialogContent>
