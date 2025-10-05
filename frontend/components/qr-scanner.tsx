@@ -55,7 +55,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         await videoRef.current.play();
       }
 
-      intervalRef.current = setInterval(scanFrame, 500);
+      intervalRef.current = setInterval(scanFrame, 150);
     } catch (err) {
       console.error("Error accessing camera:", err);
       setError(
