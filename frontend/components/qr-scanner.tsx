@@ -109,24 +109,22 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         console.log("🔍 QR detectado:", code.data);
         setLastScannedData(code.data);
         
-        const qrData = parseQRData(code.data);
-        console.log("📊 Datos parseados:", qrData);
+        // 🔴 DETENER LA CÁMARA INMEDIATAMENTE
+        stopCamera();
         
-        if (qrData) {
-          console.log("✅ Enviando datos al padre:", qrData);
-          
-          // 🔴 DETENER LA CÁMARA INMEDIATAMENTE
-          stopCamera();
-          
-          // 🔔 MOSTRAR ALERT 
-          alert(`✅ QR ESCANEADO EXITOSAMENTE\n\nNombre: ${qrData.nombre}\nApellidos: ${qrData.apellidos}\nCI: ${qrData.ci}\n\nLos datos se han cargado en el formulario.`);
-          
-          // 🔴 LLAMAR onScan DESPUÉS de detener la cámara
-          onScan(qrData);
-        } else {
-          console.warn("❌ QR detectado pero no se pudo parsear:", code.data);
-          alert("❌ CÓDIGO QR NO VÁLIDO\n\nEl formato del código QR no es correcto. Asegúrate de escanear un código QR de cédula válido.");
-        }
+        // 🔔 MOSTRAR ALERT SOLO DE DETECCIÓN
+        alert(`✅ QR DETECTADO EXITOSAMENTE\n\nContenido: ${code.data}`);
+        
+        // Solo llamar onScan para avisar que se detectó
+        // Pero no enviar datos parseados
+        console.log("✅ QR detectado, avisando al padre...");
+        
+        // Enviar datos vacíos o mock para la prueba
+        onScan({
+          nombre: "QR_DETECTADO",
+          apellidos: code.data.substring(0, 10), // primeros 10 chars
+          ci: "TEST_CI"
+        });
       }
     } catch (error) {
       console.error("Error en escaneo:", error);
@@ -139,24 +137,16 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   };
 
   const simulateScan = () => {
-    const mockQRText = `N:HASSAN ALEJANDRO
-A:RODRIGUEZ PEREZ
-CI:99032608049`;
-    console.log("🎯 Simulando escaneo con:", mockQRText);
+    console.log("🎯 Simulando escaneo...");
     
-    const qrData = parseQRData(mockQRText);
-    console.log("📊 Datos parseados de simulación:", qrData);
+    // Solo enviar datos de prueba simples
+    onScan({
+      nombre: "SIMULACION",
+      apellidos: "FUNCIONA",
+      ci: "123456789"
+    });
     
-    if (qrData) {
-      console.log("✅ Enviando datos simulados al padre:", qrData);
-      
-      // 🔔 ALERT PARA SIMULACIÓN TAMBIÉN
-      alert(`✅ SIMULACIÓN DE ESCANEO EXITOSA\n\nNombre: ${qrData.nombre}\nApellidos: ${qrData.apellidos}\nCI: ${qrData.ci}\n\nLos datos se han cargado en el formulario.`);
-      
-      onScan(qrData);
-    } else {
-      alert("❌ ERROR EN SIMULACIÓN\n\nNo se pudieron parsear los datos de prueba.");
-    }
+    alert("✅ SIMULACIÓN DE ESCANEO EXITOSA");
   };
 
   useEffect(() => {
@@ -231,10 +221,9 @@ CI:99032608049`;
             Apunta la cámara hacia el código QR de la cédula. Asegúrate de tener buena iluminación y mantener el código dentro del marco.
           </p>
           
-          {/* 🔔 Indicador visual de que se mostrará un alert */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
             <p className="text-sm text-blue-700 text-center">
-              <strong>Nota:</strong> Se mostrará una alerta cuando el QR sea detectado exitosamente.
+              <strong>Modo prueba:</strong> Solo detección - se mostrará alerta cuando se detecte cualquier QR.
             </p>
           </div>
         </div>
