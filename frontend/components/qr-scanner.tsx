@@ -85,29 +85,29 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
 
   const scanFrame = () => {
     if (!videoRef.current || !canvasRef.current || !cameraReady) return;
-
+  
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const context = canvas.getContext("2d", { willReadFrequently: true });
-
+  
     const isVideoReady = video.readyState >= video.HAVE_CURRENT_DATA;
     if (!context || !isVideoReady || video.videoWidth === 0) return;
-
+  
     try {
       const scale = 0.7;
       canvas.width = video.videoWidth * scale;
       canvas.height = video.videoHeight * scale;
-
+  
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
       const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-
+  
       const code = jsQR(imageData.data, imageData.width, imageData.height, {
         inversionAttempts: "dontInvert",
       });
-
+  
       if (code && code.data !== lastScannedData) {
         console.log("🔍 QR detectado:", code.data);
-        setLastScannedData(code.data); // Prevenir escaneos duplicados
+        setLastScannedData(code.data);
         
         const qrData = parseQRData(code.data);
         console.log("📊 Datos parseados:", qrData);
@@ -115,14 +115,16 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         if (qrData) {
           console.log("✅ Enviando datos al padre:", qrData);
           
-          // 🔔 MOSTRAR ALERT CUANDO SE DETECTA EL QR
+          // 🔴 DETENER LA CÁMARA INMEDIATAMENTE
+          stopCamera();
+          
+          // 🔔 MOSTRAR ALERT 
           alert(`✅ QR ESCANEADO EXITOSAMENTE\n\nNombre: ${qrData.nombre}\nApellidos: ${qrData.apellidos}\nCI: ${qrData.ci}\n\nLos datos se han cargado en el formulario.`);
           
+          // 🔴 LLAMAR onScan DESPUÉS de detener la cámara
           onScan(qrData);
-          // NO cerrar inmediatamente - dejar que el padre maneje el cierre
         } else {
           console.warn("❌ QR detectado pero no se pudo parsear:", code.data);
-          // 🔔 ALERT PARA QR NO VÁLIDO
           alert("❌ CÓDIGO QR NO VÁLIDO\n\nEl formato del código QR no es correcto. Asegúrate de escanear un código QR de cédula válido.");
         }
       }
