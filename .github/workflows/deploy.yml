@@ -61,7 +61,7 @@ jobs:
     - name: ⎔ Setup Node.js (necesario para NestJS)
       uses: actions/setup-node@v4
       with:
-        node-version: '22'  # ⚠️ AJUSTAR a la versión
+        node-version: '22.18.0-alpine3.22'  # ⚠️ AJUSTAR a la versión
         cache: 'npm'
         cache-dependency-path: api/package-lock.json  # ⚠️ AJUSTAR a la ruta de tu package-lock.json
     - name: 📥 Instalar dependencias (actualizar lock file)
