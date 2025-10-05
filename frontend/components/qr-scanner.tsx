@@ -34,17 +34,21 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       setIsScanning(true);
       setCameraReady(false);
       setLastScannedData(null);
-
+  
+      // CONFIGURACIÓN OPTIMIZADA PARA QR
       const constraints = {
         video: {
           facingMode: "environment",
+          width: { ideal: 1280 },  // Resolución óptima para QR
+          height: { ideal: 720 },   // 720p es suficiente
           aspectRatio: { ideal: 1.777 },
+          frameRate: { ideal: 30 }  // Mayor frame rate
         },
       };
-
+  
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
-
+  
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         
@@ -54,8 +58,9 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         
         await videoRef.current.play();
       }
-
-      intervalRef.current = setInterval(scanFrame, 500);
+  
+      // AUMENTAR FRECUENCIA DE ESCANEO
+      intervalRef.current = setInterval(scanFrame, 250); // 4 escaneos/segundo
     } catch (err) {
       console.error("Error accessing camera:", err);
       setError(
