@@ -22,6 +22,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
 
   const startCamera = async () => {
     try {
+      alert("Iniciando cámara...")
       setError(null)
       setIsScanning(true)
 
@@ -33,44 +34,69 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         },
       })
 
+      alert("Cámara accedida correctamente")
       streamRef.current = stream
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         videoRef.current.play()
+        alert("Video element configurado")
       }
 
       // Iniciar escaneo cada 500ms
       intervalRef.current = setInterval(scanFrame, 500)
+      alert("Intervalo de escaneo iniciado")
     } catch (err) {
+      const errorMsg = `Error al acceder a la cámara: ${err}`
+      alert(errorMsg)
       setError("No se pudo acceder a la cámara")
       setIsScanning(false)
     }
   }
 
   const stopCamera = () => {
+    alert("Deteniendo cámara...")
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop())
       streamRef.current = null
+      alert("Stream de cámara detenido")
     }
 
     if (intervalRef.current) {
       clearInterval(intervalRef.current)
       intervalRef.current = null
+      alert("Intervalo limpiado")
     }
 
     setIsScanning(false)
   }
 
   const scanFrame = async () => {
-    if (!videoRef.current || !canvasRef.current) return
+    if (!videoRef.current) {
+      alert("Video ref no disponible en scanFrame")
+      return
+    }
+    if (!canvasRef.current) {
+      alert("Canvas ref no disponible en scanFrame")
+      return
+    }
 
     const video = videoRef.current
     const canvas = canvasRef.current
     const context = canvas.getContext("2d")
 
-    if (!context || video.readyState !== video.HAVE_ENOUGH_DATA) return
+    if (!context) {
+      alert("Context 2D no disponible")
+      return
+    }
 
+    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+      console.log("Video no tiene suficientes datos")
+      return
+    }
+
+    alert(`Escaneando frame - Video dimensions: ${video.videoWidth}x${video.videoHeight}`)
+    
     canvas.width = video.videoWidth
     canvas.height = video.videoHeight
     context.drawImage(video, 0, 0, canvas.width, canvas.height)
@@ -78,10 +104,12 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     try {
       // Simular detección de QR (en producción usarías una librería como jsQR)
       const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+      alert(`ImageData obtenido: ${imageData.width}x${imageData.height}`)
 
       // Aquí iría la lógica real de detección de QR
       // Por ahora, simulamos con un texto de prueba
       const mockQRText = "N:HASSAN ALEJANDROA:RODRIGUEZ PEREZCI:99032608049"
+      alert(`Texto QR simulado: ${mockQRText}`)
 
       // En desarrollo, puedes usar este botón para simular un escaneo
       // const qrData = parseQRData(mockQRText)
@@ -90,26 +118,37 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       //   handleClose()
       // }
     } catch (err) {
+      alert(`Error escaneando frame: ${err}`)
       console.error("Error scanning frame:", err)
     }
   }
 
   const handleClose = () => {
+    alert("Cerrando scanner...")
     stopCamera()
     onClose()
   }
 
   const simulateScan = () => {
+    alert("Iniciando simulación de escaneo...")
     // Función para simular un escaneo en desarrollo
     const mockQRText = "N:HASSAN ALEJANDROA:RODRIGUEZ PEREZCI:99032608049"
+    alert(`Texto QR a parsear: ${mockQRText}`)
+    
     const qrData = parseQRData(mockQRText)
+    alert(`Datos QR parseados: ${JSON.stringify(qrData)}`)
+    
     if (qrData) {
+      alert("QR data válido, llamando onScan")
       onScan(qrData)
       handleClose()
+    } else {
+      alert("QR data es null o undefined")
     }
   }
 
   useEffect(() => {
+    alert(`Dialog state changed: isOpen = ${isOpen}`)
     if (isOpen) {
       startCamera()
     } else {
@@ -117,6 +156,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     }
 
     return () => {
+      alert("Cleanup effect ejecutado")
       stopCamera()
     }
   }, [isOpen])
@@ -141,7 +181,15 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
             </div>
           ) : (
             <div className="relative">
-              <video ref={videoRef} className="w-full h-64 bg-black rounded-lg object-cover" playsInline muted />
+              <video 
+                ref={videoRef} 
+                className="w-full h-64 bg-black rounded-lg object-cover" 
+                playsInline 
+                muted 
+                onLoadedMetadata={() => alert("Video metadata loaded")}
+                onLoadStart={() => alert("Video load started")}
+                onCanPlay={() => alert("Video puede reproducirse")}
+              />
               <canvas ref={canvasRef} className="hidden" />
 
               {isScanning && (
