@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Camera, X } from "lucide-react";
+import { Camera, X, RefreshCw } from "lucide-react";
 import { parseQRData, type QRData } from "@/lib/qr-scanner";
 import jsQR from "jsqr";
 
@@ -23,10 +23,42 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   const [error, setError] = useState<string | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [lastScannedData, setLastScannedData] = useState<string | null>(null);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+
+  // Verificar permisos de cámara
+  const checkCameraPermissions = async (): Promise<boolean> => {
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setError("Tu navegador no soporta acceso a la cámara");
+        return false;
+      }
+
+      // Verificar permisos usando Permissions API si está disponible
+      if (navigator.permissions) {
+        try {
+          const permissionStatus = await navigator.permissions.query({ 
+            name: "camera" as PermissionName 
+          });
+          setHasCameraPermission(permissionStatus.state === "granted");
+          
+          permissionStatus.onchange = () => {
+            setHasCameraPermission(permissionStatus.state === "granted");
+          };
+        } catch (e) {
+          console.log("Permissions API no disponible para cámara");
+        }
+      }
+      return true;
+    } catch (err) {
+      console.error("Error verificando permisos:", err);
+      return false;
+    }
+  };
 
   const startCamera = async () => {
     try {
@@ -35,81 +67,78 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       setCameraReady(false);
       setLastScannedData(null);
 
-      // Primero verificar si hay permisos
-      const permissions = await navigator.permissions?.query({ name: 'camera' as PermissionName });
-      if (permissions?.state === 'denied') {
-        throw new Error("Permisos de cámara denegados. Ve a ajustes del navegador y permite el acceso a la cámara.");
-      }
+      console.log("📷 Iniciando cámara...");
 
       const constraints = {
         video: { 
           facingMode: "environment",
           width: { ideal: 1280 },
-          height: { ideal: 720 }
-        },
-        audio: false
+          height: { ideal: 720 },
+          frameRate: { ideal: 30 }
+        }
       };
 
-      console.log("📷 Solicitando acceso a cámara...");
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
-      console.log("✅ Cámara accedida correctamente");
+      setHasCameraPermission(true);
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         
-        videoRef.current.onloadedmetadata = () => {
-          console.log("📹 Metadata de video cargada");
-          setCameraReady(true);
-        };
+        return new Promise<void>((resolve, reject) => {
+          if (!videoRef.current) {
+            reject(new Error("Elemento video no disponible"));
+            return;
+          }
 
-        videoRef.current.onplay = () => {
-          console.log("▶️ Video reproduciéndose");
-          // Iniciar escaneo cuando el video esté reproduciéndose
-          startScanning();
-        };
+          const onLoadedMetadata = () => {
+            console.log("✅ Video metadata cargada");
+            videoRef.current?.removeEventListener("loadedmetadata", onLoadedMetadata);
+            setCameraReady(true);
+            resolve();
+          };
 
-        videoRef.current.onerror = (e) => {
-          console.error("❌ Error en video:", e);
-          setError("Error al reproducir el video de la cámara");
-        };
-        
-        // Usar play() con manejo de errores
-        videoRef.current.play().catch(playError => {
-          console.error("Error en play():", playError);
-          setError("Error al iniciar la cámara: " + playError.message);
+          const onError = (e: Event) => {
+            console.error("❌ Error en video:", e);
+            videoRef.current?.removeEventListener("error", onError);
+            reject(new Error("Error al cargar el video"));
+          };
+
+          videoRef.current.addEventListener("loadedmetadata", onLoadedMetadata);
+          videoRef.current.addEventListener("error", onError);
+
+          // Intentar reproducir
+          videoRef.current.play().catch(playError => {
+            console.error("Error en play():", playError);
+            reject(playError);
+          });
         });
       }
-
     } catch (err: any) {
       console.error("❌ Error accediendo a cámara:", err);
-      
-      let errorMessage = "No se pudo acceder a la cámara. ";
-      
-      if (err.name === 'NotAllowedError') {
-        errorMessage += "Permisos denegados. Asegúrate de permitir el acceso a la cámara en tu navegador.";
-      } else if (err.name === 'NotFoundError') {
-        errorMessage += "No se encontró ninguna cámara.";
-      } else if (err.name === 'NotSupportedError') {
-        errorMessage += "Tu navegador no soporta esta funcionalidad.";
-      } else if (err.name === 'NotReadableError') {
-        errorMessage += "La cámara está siendo usada por otra aplicación.";
-      } else {
-        errorMessage += err.message || "Error desconocido.";
-      }
-      
-      setError(errorMessage);
-      setIsScanning(false);
+      handleCameraError(err);
     }
   };
 
-  const startScanning = () => {
-    console.log("🔍 Iniciando escaneo QR...");
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
+  const handleCameraError = (err: any) => {
+    let errorMessage = "No se pudo acceder a la cámara. ";
+    
+    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      errorMessage = "Permisos de cámara denegados. Por favor, permite el acceso a la cámara en la configuración de tu navegador.";
+      setHasCameraPermission(false);
+    } else if (err.name === 'NotFoundError' || err.name === 'OverconstrainedError') {
+      errorMessage = "No se encontró una cámara trasera. Asegúrate de que tu dispositivo tenga cámara y que no esté siendo usada por otra aplicación.";
+    } else if (err.name === 'NotSupportedError') {
+      errorMessage = "Tu navegador no soporta esta funcionalidad. Intenta con Chrome, Firefox o Safari.";
+    } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+      errorMessage = "La cámara está siendo usada por otra aplicación. Cierra otras aplicaciones que usen la cámara e intenta nuevamente.";
+    } else {
+      errorMessage += err.message || "Error desconocido al acceder a la cámara.";
     }
     
-    intervalRef.current = setInterval(scanFrame, 300); // Escanear cada 300ms
+    setError(errorMessage);
+    setIsScanning(false);
+    setCameraReady(false);
   };
 
   const scanFrame = () => {
@@ -122,21 +151,24 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     const context = canvas.getContext("2d", { willReadFrequently: true });
 
     if (!context || video.videoWidth === 0 || video.videoHeight === 0) {
+      animationFrameRef.current = requestAnimationFrame(scanFrame);
       return;
     }
 
     try {
-      // Configurar canvas
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      // Configurar canvas con las dimensiones actuales del video
+      if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+      }
 
-      // Dibujar frame
+      // Dibujar frame actual
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
       const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
 
       // Detectar QR
       const code = jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: "attemptBoth",
+        inversionAttempts: "dontInvert",
       });
 
       if (code && code.data !== lastScannedData) {
@@ -149,36 +181,48 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
           const qrData = parseQRData(code.data);
           
           if (qrData) {
-            console.log("✅ Datos parseados:", qrData);
-            stopCamera();
-            alert(`✅ CÉDULA CUBANA ESCANEADA\n\nNombre: ${qrData.nombre}\nApellidos: ${qrData.apellidos}\nCI: ${qrData.ci}\n\nLos datos se han cargado en el formulario.`);
-            onScan(qrData);
+            console.log("✅ Datos parseados correctamente");
+            handleSuccessfulScan(qrData);
           } else {
-            console.warn("❌ No se pudo parsear:", code.data);
-            alert("❌ FORMATO NO VÁLIDO\n\nEl QR se detectó pero no tiene el formato correcto.");
+            console.warn("❌ No se pudo parsear el QR");
+            handleInvalidQR("El QR se detectó pero no tiene el formato correcto para cédula cubana.");
           }
         } else {
           console.warn("❌ No es formato cubano:", code.data);
-          alert(`❌ NO ES CÉDULA CUBANA\n\nContenido:\n${code.data}\n\nFormato esperado: N:Nombre / A:Apellidos / CI:Número`);
+          handleInvalidQR(`Formato no reconocido. Se esperaba formato de cédula cubana.`);
         }
       }
+
+      // Continuar escaneo
+      animationFrameRef.current = requestAnimationFrame(scanFrame);
     } catch (error) {
       console.error("Error en escaneo:", error);
+      animationFrameRef.current = requestAnimationFrame(scanFrame);
     }
+  };
+
+  const handleSuccessfulScan = (qrData: QRData) => {
+    stopCamera();
+    alert(`✅ CÉDULA CUBANA ESCANEADA\n\nNombre: ${qrData.nombre}\nApellidos: ${qrData.apellidos}\nCI: ${qrData.ci}`);
+    onScan(qrData);
+  };
+
+  const handleInvalidQR = (message: string) => {
+    alert(`❌ QR NO VÁLIDO\n\n${message}\n\nApunta a un código QR de cédula cubana.`);
   };
 
   const stopCamera = () => {
     console.log("🛑 Deteniendo cámara...");
     
-    // Limpiar intervalo
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
+    // Detener animation frame
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
     }
     
-    // Detener stream
+    // Detener stream de cámara
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => {
+      streamRef.current.getTracks().forEach(track => {
         track.stop();
       });
       streamRef.current = null;
@@ -212,30 +256,27 @@ FV:ACW631074`;
     if (qrData) {
       alert(`✅ SIMULACIÓN EXITOSA\n\nNombre: ${qrData.nombre}\nApellidos: ${qrData.apellidos}\nCI: ${qrData.ci}`);
       onScan(qrData);
+      handleClose();
     } else {
-      alert("❌ ERROR EN SIMULACIÓN");
+      alert("❌ ERROR EN SIMULACIÓN: No se pudieron parsear los datos");
     }
   };
 
-  // Función para solicitar permisos manualmente
-  const requestPermissions = async () => {
-    try {
-      // Intentar acceder a la cámara para solicitar permisos
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      // Cerrar inmediatamente después de obtener permisos
-      stream.getTracks().forEach(track => track.stop());
-      alert("✅ Permisos concedidos. Ahora puedes usar el escáner.");
-      startCamera();
-    } catch (err) {
-      console.error("Error solicitando permisos:", err);
-      alert("❌ No se pudieron obtener los permisos de cámara.");
-    }
+  const retryCamera = async () => {
+    stopCamera();
+    await new Promise(resolve => setTimeout(resolve, 500)); // Pequeña pausa
+    startCamera();
   };
 
+  // Efecto para manejar apertura/cierre del modal
   useEffect(() => {
     if (isOpen) {
-      console.log("🎬 Modal abierto, iniciando cámara...");
-      startCamera();
+      console.log("🎬 Modal abierto, verificando permisos...");
+      checkCameraPermissions().then((canAccess) => {
+        if (canAccess) {
+          startCamera();
+        }
+      });
     } else {
       console.log("📴 Modal cerrado, deteniendo cámara...");
       stopCamera();
@@ -246,9 +287,23 @@ FV:ACW631074`;
     };
   }, [isOpen]);
 
+  // Efecto para iniciar escaneo cuando la cámara esté lista
+  useEffect(() => {
+    if (cameraReady && isScanning) {
+      console.log("🔍 Iniciando escaneo QR...");
+      animationFrameRef.current = requestAnimationFrame(scanFrame);
+    }
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [cameraReady, isScanning]);
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Camera className="h-5 w-5" />
@@ -258,61 +313,73 @@ FV:ACW631074`;
 
         <div className="space-y-4">
           {error ? (
-            <div className="text-center py-8">
-              <p className="text-red-600 mb-4">{error}</p>
+            <div className="text-center py-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                <p className="text-red-700 text-sm">{error}</p>
+              </div>
               <div className="space-y-2">
-                <Button onClick={requestPermissions} variant="outline" className="w-full">
-                  Solicitar Permisos
-                </Button>
-                <Button onClick={startCamera} variant="outline" className="w-full">
-                  Intentar de nuevo
+                <Button onClick={retryCamera} className="w-full" variant="default">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Reintentar
                 </Button>
                 <Button onClick={simulateScan} variant="outline" className="w-full">
                   Usar simulación
                 </Button>
+                <Button onClick={handleClose} variant="ghost" className="w-full">
+                  Cancelar
+                </Button>
               </div>
             </div>
           ) : (
-            <div className="relative">
-              <video
-                ref={videoRef}
-                className="w-full h-64 bg-black rounded-lg object-cover"
-                playsInline
-                muted
-              />
-              <canvas ref={canvasRef} className="hidden" />
+            <>
+              <div className="relative bg-black rounded-lg overflow-hidden">
+                <video
+                  ref={videoRef}
+                  className="w-full h-64 object-cover"
+                  playsInline
+                  muted
+                  autoPlay
+                />
+                <canvas ref={canvasRef} className="hidden" />
 
-              {isScanning && !cameraReady && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-lg">
-                  <p className="text-white">Solicitando permisos de cámara...</p>
-                </div>
-              )}
+                {!cameraReady && isScanning && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                    <div className="text-center text-white">
+                      <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2" />
+                      <p>Iniciando cámara...</p>
+                    </div>
+                  </div>
+                )}
 
-              {cameraReady && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="border-2 border-green-500 border-dashed w-48 h-48 rounded-lg animate-pulse" />
-                </div>
-              )}
-            </div>
+                {cameraReady && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="border-2 border-green-500 border-dashed w-48 h-48 rounded-lg animate-pulse" />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                <Button onClick={simulateScan} className="flex-1" variant="outline">
+                  Simular Escaneo
+                </Button>
+                <Button onClick={retryCamera} variant="outline" size="icon" disabled={!cameraReady}>
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+                <Button onClick={handleClose} variant="outline" size="icon">
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-700 text-center">
+                  <strong>Instrucciones:</strong> Apunta a un código QR de cédula cubana
+                </p>
+                <p className="text-xs text-blue-600 text-center mt-1">
+                  El formato debe ser: N:Nombre / A:Apellidos / CI:Número
+                </p>
+              </div>
+            </>
           )}
-
-          <div className="flex gap-2">
-            <Button onClick={simulateScan} className="flex-1" variant="outline">
-              Simular Escaneo
-            </Button>
-            <Button onClick={handleClose} variant="outline" size="icon">
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <p className="text-sm text-blue-700 text-center">
-              <strong>Permisos necesarios:</strong> La cámara requiere permisos para escanear QR
-            </p>
-            <p className="text-xs text-blue-600 text-center mt-1">
-              Asegúrate de permitir el acceso a la cámara cuando el navegador lo solicite
-            </p>
-          </div>
         </div>
       </DialogContent>
     </Dialog>
