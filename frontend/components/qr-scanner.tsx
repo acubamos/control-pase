@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Camera, X } from "lucide-react"
 import { parseQRData, type QRData } from "@/lib/qr-scanner"
+import jsQR from "jsqr"
 
 interface QRScannerProps {
   onScan: (data: QRData) => void
@@ -15,16 +16,17 @@ interface QRScannerProps {
 export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   const [isScanning, setIsScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [scanningStatus, setScanningStatus] = useState("Escaneando...")
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const animationRef = useRef<number | null>(null)
 
   const startCamera = async () => {
     try {
-      alert("Iniciando cámara...")
       setError(null)
       setIsScanning(true)
+      setScanningStatus("Escaneando...")
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -34,50 +36,38 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         },
       })
 
-      alert("Cámara accedida correctamente")
       streamRef.current = stream
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream
-        videoRef.current.play()
-        alert("Video element configurado")
+        await videoRef.current.play()
       }
 
-      // Iniciar escaneo cada 500ms
-      intervalRef.current = setInterval(scanFrame, 500)
-      alert("Intervalo de escaneo iniciado")
+      // Iniciar escaneo continuo
+      scanFrame()
     } catch (err) {
-      const errorMsg = `Error al acceder a la cámara: ${err}`
-      alert(errorMsg)
-      setError("No se pudo acceder a la cámara")
+      setError("No se pudo acceder a la cámara. Asegúrate de permitir los permisos de cámara.")
       setIsScanning(false)
     }
   }
 
   const stopCamera = () => {
-    alert("Deteniendo cámara...")
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop())
       streamRef.current = null
-      alert("Stream de cámara detenido")
     }
 
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = null
-      alert("Intervalo limpiado")
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current)
+      animationRef.current = null
     }
 
     setIsScanning(false)
   }
 
-  const scanFrame = async () => {
-    if (!videoRef.current) {
-      alert("Video ref no disponible en scanFrame")
-      return
-    }
-    if (!canvasRef.current) {
-      alert("Canvas ref no disponible en scanFrame")
+  const scanFrame = () => {
+    if (!videoRef.current || !canvasRef.current) {
+      animationRef.current = requestAnimationFrame(scanFrame)
       return
     }
 
@@ -85,70 +75,71 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     const canvas = canvasRef.current
     const context = canvas.getContext("2d")
 
-    if (!context) {
-      alert("Context 2D no disponible")
+    if (!context || video.readyState !== video.HAVE_ENOUGH_DATA) {
+      animationRef.current = requestAnimationFrame(scanFrame)
       return
     }
 
-    if (video.readyState !== video.HAVE_ENOUGH_DATA) {
-      console.log("Video no tiene suficientes datos")
-      return
-    }
-
-    alert(`Escaneando frame - Video dimensions: ${video.videoWidth}x${video.videoHeight}`)
-    
+    // Configurar canvas con las dimensiones del video
     canvas.width = video.videoWidth
     canvas.height = video.videoHeight
+    
+    // Dibujar el frame actual del video en el canvas
     context.drawImage(video, 0, 0, canvas.width, canvas.height)
 
-    try {
-      // Simular detección de QR (en producción usarías una librería como jsQR)
-      const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-      alert(`ImageData obtenido: ${imageData.width}x${imageData.height}`)
+    // Obtener los datos de la imagen para procesar el QR
+    const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+    
+    // Usar jsQR para detectar y decodificar el código QR
+    const qrCode = jsQR(imageData.data, imageData.width, imageData.height)
 
-      // Aquí iría la lógica real de detección de QR
-      // Por ahora, simulamos con un texto de prueba
-      const mockQRText = "N:HASSAN ALEJANDROA:RODRIGUEZ PEREZCI:99032608049"
-      alert(`Texto QR simulado: ${mockQRText}`)
-
-      // En desarrollo, puedes usar este botón para simular un escaneo
-      // const qrData = parseQRData(mockQRText)
-      // if (qrData) {
-      //   onScan(qrData)
-      //   handleClose()
-      // }
-    } catch (err) {
-      alert(`Error escaneando frame: ${err}`)
-      console.error("Error scanning frame:", err)
+    if (qrCode) {
+      console.log("🎯 QR detectado:", qrCode.data)
+      setScanningStatus("✅ QR detectado - Procesando...")
+      
+      // Procesar los datos del QR con tu función parseQRData
+      const qrData = parseQRData(qrCode.data)
+      
+      if (qrData) {
+        console.log("✅ Datos parseados correctamente:", qrData)
+        onScan(qrData)
+        handleClose()
+        return
+      } else {
+        console.warn("❌ No se pudieron parsear los datos del QR")
+        setScanningStatus("❌ Formato QR no válido")
+        // Continuar escaneando después de un error
+        setTimeout(() => {
+          setScanningStatus("Escaneando...")
+          animationRef.current = requestAnimationFrame(scanFrame)
+        }, 1000)
+        return
+      }
     }
+
+    // Continuar escaneando si no se detectó QR
+    setScanningStatus("🔍 Buscando código QR...")
+    animationRef.current = requestAnimationFrame(scanFrame)
   }
 
   const handleClose = () => {
-    alert("Cerrando scanner...")
     stopCamera()
     onClose()
   }
 
   const simulateScan = () => {
-    alert("Iniciando simulación de escaneo...")
     // Función para simular un escaneo en desarrollo
     const mockQRText = "N:HASSAN ALEJANDROA:RODRIGUEZ PEREZCI:99032608049"
-    alert(`Texto QR a parsear: ${mockQRText}`)
+    console.log("🧪 Simulando escaneo con:", mockQRText)
     
     const qrData = parseQRData(mockQRText)
-    alert(`Datos QR parseados: ${JSON.stringify(qrData)}`)
-    
     if (qrData) {
-      alert("QR data válido, llamando onScan")
       onScan(qrData)
       handleClose()
-    } else {
-      alert("QR data es null o undefined")
     }
   }
 
   useEffect(() => {
-    alert(`Dialog state changed: isOpen = ${isOpen}`)
     if (isOpen) {
       startCamera()
     } else {
@@ -156,7 +147,6 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     }
 
     return () => {
-      alert("Cleanup effect ejecutado")
       stopCamera()
     }
   }, [isOpen])
@@ -186,30 +176,36 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
                 className="w-full h-64 bg-black rounded-lg object-cover" 
                 playsInline 
                 muted 
-                onLoadedMetadata={() => alert("Video metadata loaded")}
-                onLoadStart={() => alert("Video load started")}
-                onCanPlay={() => alert("Video puede reproducirse")}
               />
               <canvas ref={canvasRef} className="hidden" />
 
               {isScanning && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="border-2 border-white border-dashed w-48 h-48 rounded-lg animate-pulse" />
-                </div>
+                <>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="border-2 border-green-500 border-dashed w-48 h-48 rounded-lg animate-pulse" />
+                  </div>
+                  <div className="absolute bottom-2 left-0 right-0 text-center">
+                    <p className="text-white bg-black bg-opacity-50 px-3 py-1 rounded-md text-sm">
+                      {scanningStatus}
+                    </p>
+                  </div>
+                </>
               )}
             </div>
           )}
 
           <div className="flex gap-2">
-            <Button onClick={simulateScan} className="flex-1 bg-transparent" variant="outline">
-              Simular Escaneo (Dev)
+            <Button onClick={simulateScan} className="flex-1" variant="outline">
+              Simular Escaneo (Desarrollo)
             </Button>
             <Button onClick={handleClose} variant="outline" size="icon">
               <X className="h-4 w-4" />
             </Button>
           </div>
 
-          <p className="text-sm text-gray-600 text-center">Apunta la cámara hacia el código QR de la cédula</p>
+          <p className="text-sm text-gray-600 text-center">
+            Apunta la cámara hacia el código QR de la cédula
+          </p>
         </div>
       </DialogContent>
     </Dialog>
