@@ -41,7 +41,6 @@
     "@radix-ui/react-scroll-area": "latest",
     "@radix-ui/react-select": "latest",
     "@radix-ui/react-separator": "latest",
-    
     "@radix-ui/react-slider": "latest",
     "@radix-ui/react-switch": "latest",
     "@radix-ui/react-tabs": "latest",
@@ -59,8 +58,10 @@
     "embla-carousel-react": "latest",
     "express": "latest",
     "fastify": "latest",
+    "html5-qrcode": "^2.3.8",
     "input-otp": "latest",
     "ioredis": "latest",
+    "jsqr": "^1.4.0",
     "lucide-react": "^0.454.0",
     "multer": "latest",
     "next": "14.2.16",
@@ -68,6 +69,7 @@
     "passport": "latest",
     "passport-jwt": "latest",
     "path": "latest",
+    "qr-scanner": "latest",
     "react": "^18",
     "react-day-picker": "latest",
     "react-dom": "^18",
@@ -82,9 +84,6 @@
     "tailwindcss-animate": "^1.0.7",
     "ts-node": "latest",
     "vaul": "latest",
-    "qr-scanner": "latest",
-    "jsqr": "^1.4.0",
-    "html5-qrcode": "^2.3.8",
     "zod": "^3.22.4"
   },
   "devDependencies": {
@@ -99,6 +98,3 @@
     "typescript": "^5"
   }
 }
-
-
-
