@@ -27,23 +27,22 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       setError(null)
       setIsScanning(true)
       setScanningStatus("Escaneando...")
-
+  
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: "environment",
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+          width: { ideal: 1920 },   // resolución más alta disponible
+          height: { ideal: 1080 },
         },
       })
-
+  
       streamRef.current = stream
-
+  
       if (videoRef.current) {
         videoRef.current.srcObject = stream
         await videoRef.current.play()
       }
-
-      // Iniciar escaneo continuo
+  
       scanFrame()
     } catch (err) {
       setError("No se pudo acceder a la cámara. Asegúrate de permitir los permisos de cámara.")
@@ -66,60 +65,62 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   }
 
   const scanFrame = () => {
-    if (!videoRef.current || !canvasRef.current) {
-      animationRef.current = requestAnimationFrame(scanFrame)
-      return
-    }
-
-    const video = videoRef.current
-    const canvas = canvasRef.current
-    const context = canvas.getContext("2d")
-
-    if (!context || video.readyState !== video.HAVE_ENOUGH_DATA) {
-      animationRef.current = requestAnimationFrame(scanFrame)
-      return
-    }
-
-    // Configurar canvas con las dimensiones del video
-    canvas.width = video.videoWidth
-    canvas.height = video.videoHeight
-    
-    // Dibujar el frame actual del video en el canvas
-    context.drawImage(video, 0, 0, canvas.width, canvas.height)
-
-    // Obtener los datos de la imagen para procesar el QR
-    const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-    
-    // Usar jsQR para detectar y decodificar el código QR
-    const qrCode = jsQR(imageData.data, imageData.width, imageData.height)
-
-    if (qrCode) {
-      console.log("🎯 QR detectado:", qrCode.data)
-      setScanningStatus("✅ QR detectado - Procesando...")
-      
-      // Procesar los datos del QR con tu función parseQRData
-      const qrData = parseQRData(qrCode.data)
-      
-      if (qrData) {
-        console.log("✅ Datos parseados correctamente:", qrData)
-        onScan(qrData)
-        handleClose()
-        return
-      } else {
-        console.warn("❌ No se pudieron parsear los datos del QR")
-        setScanningStatus("❌ Formato QR no válido")
-        // Continuar escaneando después de un error
-        setTimeout(() => {
-          setScanningStatus("Escaneando...")
-          animationRef.current = requestAnimationFrame(scanFrame)
-        }, 1000)
+    try {
+      if (!videoRef.current || !canvasRef.current) {
+        animationRef.current = requestAnimationFrame(scanFrame)
         return
       }
+  
+      const video = videoRef.current
+      const canvas = canvasRef.current
+      const context = canvas.getContext("2d", { willReadFrequently: true })
+  
+      if (!context || video.readyState !== video.HAVE_ENOUGH_DATA) {
+        animationRef.current = requestAnimationFrame(scanFrame)
+        return
+      }
+  
+      // Escalado para mejorar rendimiento (50%)
+      const scale = 0.5
+      canvas.width = video.videoWidth * scale
+      canvas.height = video.videoHeight * scale
+  
+      context.drawImage(video, 0, 0, canvas.width, canvas.height)
+  
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
+  
+      const qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: "attemptBoth",
+      })
+  
+      if (qrCode) {
+        console.log("🎯 QR detectado:", qrCode.data)
+        setScanningStatus("✅ QR detectado - Procesando...")
+  
+        const qrData = parseQRData(qrCode.data)
+  
+        if (qrData) {
+          console.log("✅ Datos parseados correctamente:", qrData)
+          onScan(qrData)
+          handleClose()
+          return
+        } else {
+          console.warn("❌ No se pudieron parsear los datos del QR")
+          setScanningStatus("❌ Formato QR no válido")
+          setTimeout(() => {
+            setScanningStatus("Escaneando...")
+            animationRef.current = requestAnimationFrame(scanFrame)
+          }, 1000)
+          return
+        }
+      }
+  
+      setScanningStatus("🔍 Buscando código QR...")
+      animationRef.current = requestAnimationFrame(scanFrame)
+    } catch (e) {
+      console.error("Error en escaneo de frame:", e)
+      animationRef.current = requestAnimationFrame(scanFrame)
     }
-
-    // Continuar escaneando si no se detectó QR
-    setScanningStatus("🔍 Buscando código QR...")
-    animationRef.current = requestAnimationFrame(scanFrame)
   }
 
   const handleClose = () => {
