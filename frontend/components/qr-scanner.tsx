@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Camera, X, ZoomIn } from "lucide-react";
+import { Camera, X, ZoomIn, ZoomOut, Focus } from "lucide-react";
 import { parseQRData, type QRData } from "@/lib/qr-scanner";
 import jsQR from "jsqr";
 
@@ -21,6 +21,11 @@ interface QRScannerProps {
 declare global {
   interface MediaTrackCapabilities {
     focusMode?: string[];
+    focusDistance?: {
+      min: number;
+      max: number;
+      step: number;
+    };
     zoom?: {
       min: number;
       max: number;
@@ -39,7 +44,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   const [error, setError] = useState<string | null>(null);
   const [scanningStatus, setScanningStatus] = useState("Escaneando...");
   const [zoomLevel, setZoomLevel] = useState(1);
-  const [hasAutoFocus, setHasAutoFocus] = useState(false);
+  const [focusMode, setFocusMode] = useState<string>("none");
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -51,74 +56,117 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       setIsScanning(true);
       setScanningStatus("Iniciando cámara...");
 
-      // 1️⃣ Configuración mejorada para alta resolución
-      const stream = await navigator.mediaDevices.getUserMedia({
+      // 1️⃣ Configuración optimizada para objetos cercanos
+      const constraints: MediaStreamConstraints = {
         video: {
           facingMode: "environment",
-          width: { ideal: 1920 }, // Mayor resolución para más detalle
+          width: { ideal: 1920 },
           height: { ideal: 1080 },
-          aspectRatio: { ideal: 16/9 }
+          frameRate: { ideal: 30 }
         },
-      });
+      };
 
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
-
-      const videoTrack = stream.getVideoTracks()[0];
-      const capabilities = videoTrack.getCapabilities();
-      const settings = videoTrack.getSettings();
-      
-      console.log("📷 Configuración de cámara:", settings);
-      console.log("📷 Capacidades:", capabilities);
-
-      // 2️⃣ Configuración de enfoque mejorada
-      if (capabilities.focusMode) {
-        try {
-          if (capabilities.focusMode.includes("continuous")) {
-            await videoTrack.applyConstraints({
-              advanced: [{ focusMode: "continuous" } as any],
-            });
-            setHasAutoFocus(true);
-            console.log("✅ Enfoque continuo activado");
-          } else if (capabilities.focusMode.includes("single-shot")) {
-            await videoTrack.applyConstraints({
-              advanced: [{ focusMode: "single-shot" } as any],
-            });
-            console.log("✅ Enfoque single-shot activado");
-          }
-        } catch (err) {
-          console.warn("⚠️ No se pudo aplicar enfoque automático", err);
-        }
-      }
-
-      // 3️⃣ Configuración de zoom inicial
-      if (capabilities.zoom) {
-        const initialZoom = Math.min(1.5, capabilities.zoom.max);
-        await videoTrack.applyConstraints({
-          advanced: [{ zoom: initialZoom } as any],
-        });
-        setZoomLevel(initialZoom);
-        console.log(`🔍 Zoom inicial: ${initialZoom}`);
-      }
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
 
-      setScanningStatus("🔍 Enfocando...");
+      // Esperar a que el video esté listo
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      const videoTrack = stream.getVideoTracks()[0];
+      const capabilities = videoTrack.getCapabilities();
+      const settings = videoTrack.getSettings();
       
-      // Esperar a que la cámara se estabilice
-      setTimeout(() => {
-        setScanningStatus("📡 Escaneando...");
-        scanFrame();
-      }, 1500);
+      console.log("📷 Configuración actual:", settings);
+      console.log("📷 Capacidades:", capabilities);
+
+      // 2️⃣ ESTRATEGIA MEJORADA DE ENFOQUE
+      let focusApplied = false;
+
+      // Intentar enfoque manual primero (para corta distancia)
+      if (capabilities.focusMode) {
+        try {
+          // Priorizar enfoque manual si está disponible
+          if (capabilities.focusMode.includes("manual")) {
+            await videoTrack.applyConstraints({
+              advanced: [{ focusMode: "manual" } as any],
+            });
+            setFocusMode("manual");
+            console.log("✅ Enfoque manual activado");
+            focusApplied = true;
+          } 
+          // Luego enfoque continuo
+          else if (capabilities.focusMode.includes("continuous")) {
+            await videoTrack.applyConstraints({
+              advanced: [{ focusMode: "continuous" } as any],
+            });
+            setFocusMode("continuous");
+            console.log("✅ Enfoque continuo activado");
+            focusApplied = true;
+          }
+          // Finalmente single-shot
+          else if (capabilities.focusMode.includes("single-shot")) {
+            await videoTrack.applyConstraints({
+              advanced: [{ focusMode: "single-shot" } as any],
+            });
+            setFocusMode("single-shot");
+            console.log("✅ Enfoque single-shot activado");
+            focusApplied = true;
+          }
+        } catch (err) {
+          console.warn("⚠️ No se pudo aplicar configuración de enfoque", err);
+        }
+      }
+
+      // 3️⃣ CONFIGURACIÓN DE ZOOM PARA MAYOR DETALLE
+      if (capabilities.zoom) {
+        try {
+          // Usar un zoom moderado para aumentar detalle sin perder calidad
+          const optimalZoom = Math.min(1.8, capabilities.zoom.max);
+          await videoTrack.applyConstraints({
+            advanced: [{ zoom: optimalZoom } as any],
+          });
+          setZoomLevel(optimalZoom);
+          console.log(`🔍 Zoom configurado a: ${optimalZoom}`);
+        } catch (err) {
+          console.warn("⚠️ No se pudo aplicar zoom", err);
+        }
+      }
+
+      setScanningStatus("🎯 Enfocando...");
+
+      // 4️⃣ TÉCNICA DE RE-ENFOQUE MÚLTIPLE
+      if (!focusApplied) {
+        // Si no hay control de enfoque, intentar forzar re-enfoque cambiando constraints
+        try {
+          await videoTrack.applyConstraints({
+            advanced: [
+              { focusMode: "continuous" } as any,
+              { width: 1280 } as any // Cambiar resolución puede forzar re-enfoque
+            ]
+          });
+        } catch (err) {
+          console.warn("⚠️ No se pudo forzar re-enfoque", err);
+        }
+      }
+
+      // Esperar a que la cámara se estabilice y enfoque
+      setScanningStatus("🔍 Ajustando enfoque...");
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      setScanningStatus("📡 Escaneando... Busca el código QR del carnet");
+      scanFrame();
 
     } catch (err) {
       console.error("❌ Error iniciando cámara:", err);
       setError(
         err instanceof Error && err.name === 'NotAllowedError' 
           ? "Permiso de cámara denegado. Por favor permite el acceso a la cámara."
-          : "No se pudo acceder a la cámara. Asegúrate de permitir los permisos."
+          : `Error de cámara: ${err instanceof Error ? err.message : 'No se pudo acceder a la cámara'}`
       );
       setIsScanning(false);
     }
@@ -132,18 +180,61 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     
     if (!capabilities.zoom) return;
 
+    const step = 0.3; // Paso más pequeño para ajuste fino
     const newZoom = increment 
-      ? Math.min(zoomLevel + 0.5, capabilities.zoom.max)
-      : Math.max(zoomLevel - 0.5, capabilities.zoom.min);
+      ? Math.min(zoomLevel + step, capabilities.zoom.max)
+      : Math.max(zoomLevel - step, capabilities.zoom.min);
 
     try {
       await videoTrack.applyConstraints({
         advanced: [{ zoom: newZoom } as any],
       });
       setZoomLevel(newZoom);
-      console.log(`🔍 Zoom ajustado a: ${newZoom}`);
+      console.log(`🔍 Zoom ajustado a: ${newZoom.toFixed(1)}x`);
+      
+      // Re-enfocar después de cambiar zoom
+      setScanningStatus("🔍 Re-enfocando...");
+      setTimeout(() => setScanningStatus("📡 Escaneando..."), 1000);
     } catch (err) {
       console.warn("No se pudo ajustar el zoom", err);
+    }
+  };
+
+  const triggerFocus = async () => {
+    if (!streamRef.current) return;
+
+    const videoTrack = streamRef.current.getVideoTracks()[0];
+    
+    try {
+      setScanningStatus("🎯 Enfocando...");
+      
+      // Estrategia múltiple para forzar enfoque
+      if (focusMode === "manual" || focusMode === "single-shot") {
+        // Forzar re-enfoque cambiando temporalmente constraints
+        await videoTrack.applyConstraints({
+          advanced: [{ focusMode: "continuous" } as any],
+        });
+        await new Promise(resolve => setTimeout(resolve, 500));
+        await videoTrack.applyConstraints({
+          advanced: [{ focusMode: focusMode } as any],
+        });
+      } else {
+        // Para enfoque continuo, cambiar brevemente la resolución
+        const currentSettings = videoTrack.getSettings();
+        await videoTrack.applyConstraints({
+          width: currentSettings.width === 1920 ? 1280 : 1920,
+        });
+        await new Promise(resolve => setTimeout(resolve, 300));
+        await videoTrack.applyConstraints({
+          width: { ideal: 1920 },
+        });
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setScanningStatus("📡 Escaneando...");
+    } catch (err) {
+      console.warn("No se pudo forzar enfoque", err);
+      setScanningStatus("📡 Escaneando...");
     }
   };
 
@@ -160,7 +251,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
 
     setIsScanning(false);
     setZoomLevel(1);
-    setHasAutoFocus(false);
+    setFocusMode("none");
   };
 
   const scanFrame = () => {
@@ -179,7 +270,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         return;
       }
 
-      // 4️⃣ Usar resolución completa para mejor detección
+      // Usar resolución completa para máxima calidad
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
 
@@ -187,15 +278,14 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
 
       const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
 
-      // 5️⃣ Configuración mejorada de jsQR para QR pequeños
+      // Configuración optimizada para QR pequeños
       const qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
-        inversionAttempts: "dontInvert",
-        // Ajustar estos parámetros para QR pequeños
+        inversionAttempts: "attemptBoth",
       });
 
       if (qrCode) {
         console.log("🎯 QR detectado:", qrCode.data);
-        console.log("📏 Tamaño del QR:", qrCode.location);
+        console.log("📏 Dimensión del QR:", qrCode.location);
         setScanningStatus("✅ QR detectado - Procesando...");
 
         const qrData = parseQRData(qrCode.data);
@@ -209,46 +299,13 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
           console.warn("❌ No se pudieron parsear los datos del QR");
           setScanningStatus("❌ Formato QR no válido");
           setTimeout(() => {
-            setScanningStatus("Escaneando...");
+            setScanningStatus("📡 Escaneando...");
             animationRef.current = requestAnimationFrame(scanFrame);
-          }, 1000);
+          }, 1500);
           return;
         }
       }
 
-      // 6️⃣ Intentar con diferentes escalas para QR pequeños
-      if (canvas.width > 800) {
-        const scale = 0.7; // Reducir tamaño para mejor procesamiento
-        const scaledWidth = Math.floor(canvas.width * scale);
-        const scaledHeight = Math.floor(canvas.height * scale);
-        
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = scaledWidth;
-        tempCanvas.height = scaledHeight;
-        const tempContext = tempCanvas.getContext('2d');
-        
-        if (tempContext) {
-          tempContext.drawImage(video, 0, 0, scaledWidth, scaledHeight);
-          const scaledImageData = tempContext.getImageData(0, 0, scaledWidth, scaledHeight);
-          const scaledQrCode = jsQR(scaledImageData.data, scaledWidth, scaledHeight, {
-            inversionAttempts: "attemptBoth",
-          });
-          
-          if (scaledQrCode) {
-            console.log("🎯 QR detectado (escala reducida):", scaledQrCode.data);
-            setScanningStatus("✅ QR detectado - Procesando...");
-
-            const qrData = parseQRData(scaledQrCode.data);
-            if (qrData) {
-              onScan(qrData);
-              handleClose();
-              return;
-            }
-          }
-        }
-      }
-
-      setScanningStatus("🔍 Buscando código QR...");
       animationRef.current = requestAnimationFrame(scanFrame);
     } catch (e) {
       console.error("Error en escaneo de frame:", e);
@@ -290,7 +347,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Camera className="h-5 w-5" />
-            Escanear Código QR
+            Escanear Código QR del Carnet
           </DialogTitle>
         </DialogHeader>
 
@@ -309,30 +366,46 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
                 className="w-full h-64 sm:h-80 bg-black rounded-lg object-cover"
                 playsInline
                 muted
+                autoPlay
               />
               <canvas ref={canvasRef} className="hidden" />
 
               {isScanning && (
                 <>
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="border-2 border-green-500 border-dashed w-48 h-32 rounded-lg animate-pulse" />
+                    <div className="border-2 border-green-500 border-dashed w-40 h-28 rounded-lg animate-pulse" />
                   </div>
                   <div className="absolute bottom-2 left-0 right-0 text-center">
-                    <p className="text-white bg-black bg-opacity-70 px-3 py-1 rounded-md text-sm">
+                    <p className="text-white bg-black bg-opacity-80 px-3 py-2 rounded-md text-sm font-medium">
                       {scanningStatus}
                     </p>
                   </div>
                   
-                  {/* Controles de zoom */}
-                  <div className="absolute top-2 right-2 flex flex-col gap-1">
+                  {/* Controles de cámara */}
+                  <div className="absolute top-2 right-2 flex flex-col gap-2">
+                    <Button
+                      onClick={triggerFocus}
+                      size="icon"
+                      className="h-8 w-8 bg-blue-600 bg-opacity-80 hover:bg-blue-700"
+                      title="Forzar enfoque"
+                    >
+                      <Focus className="h-4 w-4" />
+                    </Button>
                     <Button
                       onClick={() => adjustZoom(true)}
                       size="icon"
-                      className="h-8 w-8 bg-black bg-opacity-50 hover:bg-opacity-70"
+                      className="h-8 w-8 bg-black bg-opacity-70 hover:bg-opacity-90"
                     >
                       <ZoomIn className="h-4 w-4" />
                     </Button>
-                    <div className="text-white bg-black bg-opacity-50 px-2 py-1 rounded text-xs text-center">
+                    <Button
+                      onClick={() => adjustZoom(false)}
+                      size="icon"
+                      className="h-8 w-8 bg-black bg-opacity-70 hover:bg-opacity-90"
+                    >
+                      <ZoomOut className="h-4 w-4" />
+                    </Button>
+                    <div className="text-white bg-black bg-opacity-70 px-2 py-1 rounded text-xs text-center">
                       {zoomLevel.toFixed(1)}x
                     </div>
                   </div>
@@ -346,26 +419,24 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
               <Button onClick={simulateScan} variant="outline" className="flex-1">
                 Simular Escaneo
               </Button>
-              <Button 
-                onClick={() => adjustZoom(true)} 
-                variant="outline" 
-                size="icon"
-                disabled={!isScanning}
-              >
-                <ZoomIn className="h-4 w-4" />
-              </Button>
             </div>
             <Button onClick={handleClose} variant="outline" size="icon">
               <X className="h-4 w-4" />
             </Button>
           </div>
 
-          <div className="text-sm text-gray-600 space-y-1">
-            <p className="text-center">
-              📍 Para QR pequeños: Acerca la cámara al carnet y mantén estable
+          <div className="text-sm text-gray-600 space-y-2">
+            <p className="text-center font-medium">
+              📍 Para mejor resultado:
             </p>
-            <p className="text-center text-xs">
-              {hasAutoFocus ? "✅ Enfoque automático activo" : "⚠️ Usa zoom manual si es necesario"}
+            <ul className="text-xs space-y-1 text-center">
+              <li>• Acerca el carnet a 10-15 cm de la cámara</li>
+              <li>• Usa el botón <Focus className="h-3 w-3 inline" /> para forzar enfoque</li>
+              <li>• Ajusta el zoom si es necesario</li>
+              <li>• Buena iluminación y evitar reflejos</li>
+            </ul>
+            <p className="text-center text-xs mt-2">
+              {focusMode !== "none" ? `✅ Modo enfoque: ${focusMode}` : "⚠️ Enfoque automático"}
             </p>
           </div>
         </div>
