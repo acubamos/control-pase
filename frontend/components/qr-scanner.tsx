@@ -37,18 +37,13 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         video: {
           facingMode: "environment",
           width: { ideal: 1280 },
-          height: { ideal: 720 },         
+          height: { ideal: 720 },  
+          advanced: [
+            { focusMode: "continuous" } as any,
+            { zoom: 1.3 } as any
+          ]       
         },
-      })
-      
-      const [track] = stream.getVideoTracks()
-      await track.applyConstraints({
-        advanced: [
-          { focusMode: "continuous" },
-          { zoom: 1.3 }
-        ] as any,        
-      })
-      
+      })   
 
       streamRef.current = stream;
 
