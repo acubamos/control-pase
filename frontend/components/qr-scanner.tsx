@@ -53,9 +53,9 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: "environment" },
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-          aspectRatio: { ideal: 4/3 },
+          width: { ideal: 1920 }, // ← Máxima posible
+          height: { ideal: 1080 }, // ← Máxima posible
+          frameRate: { ideal: 30 }, // Balance entre fluidez y calidad
         },
       });
 
@@ -267,4 +267,5 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     </Dialog>
   );
 }
+
 
