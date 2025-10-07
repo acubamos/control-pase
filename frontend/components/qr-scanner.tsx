@@ -136,20 +136,101 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         return;
       }
 
-      const scale = 1;
-      canvas.width = video.videoWidth * scale;
-      canvas.height = video.videoHeight * scale;
-
+      // 1️⃣ Configurar canvas a resolución completa
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
       const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
 
-      const qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
+      // 2️⃣ PRIMER INTENTO: Detección normal (para QR grandes)
+      let qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
         inversionAttempts: "attemptBoth",
       });
 
+      // 3️⃣ SEGUNDO INTENTO: Si no detecta, usar escalado 2x para QR pequeños
+      if (!qrCode && canvas.width > 800) {
+        const scale = 2; // Escala 2x para más detalle
+        const scaledWidth = Math.floor(canvas.width * scale);
+        const scaledHeight = Math.floor(canvas.height * scale);
+
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = scaledWidth;
+        tempCanvas.height = scaledHeight;
+        const tempContext = tempCanvas.getContext("2d");
+
+        if (tempContext) {
+          // Mejorar calidad del escalado
+          tempContext.imageSmoothingEnabled = false;
+          tempContext.drawImage(
+            canvas,
+            0,
+            0,
+            canvas.width,
+            canvas.height,
+            0,
+            0,
+            scaledWidth,
+            scaledHeight
+          );
+
+          const scaledImageData = tempContext.getImageData(
+            0,
+            0,
+            scaledWidth,
+            scaledHeight
+          );
+
+          qrCode = jsQR(scaledImageData.data, scaledWidth, scaledHeight, {
+            inversionAttempts: "attemptBoth",
+          });
+
+          if (qrCode) {
+            console.log("🎯 QR pequeño detectado con escalado 2x");
+          }
+        }
+      }
+
+      // 4️⃣ TERCER INTENTO: Procesamiento con contraste mejorado
+      if (!qrCode) {
+        // Crear una versión con mejor contraste
+        const contrastCanvas = document.createElement("canvas");
+        contrastCanvas.width = canvas.width;
+        contrastCanvas.height = canvas.height;
+        const contrastContext = contrastCanvas.getContext("2d");
+
+        if (contrastContext) {
+          contrastContext.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+          // Aplicar filtro de contraste
+          const contrastImageData = contrastContext.getImageData(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+          );
+          enhanceContrast(contrastImageData.data);
+
+          qrCode = jsQR(contrastImageData.data, canvas.width, canvas.height, {
+            inversionAttempts: "attemptBoth",
+          });
+
+          if (qrCode) {
+            console.log("🎯 QR detectado con contraste mejorado");
+          }
+        }
+      }
+
+      // 5️⃣ PROCESAR RESULTADO
       if (qrCode) {
         console.log("🎯 QR detectado:", qrCode.data);
+        console.log(
+          "📏 Tamaño del QR:",
+          qrCode.location
+            ? `${qrCode.location.dimension}x${qrCode.location.dimension}`
+            : "Desconocido"
+        );
+
         setScanningStatus("✅ QR detectado - Procesando...");
 
         const qrData = parseQRData(qrCode.data);
@@ -170,11 +251,158 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         }
       }
 
+      // 6️⃣ ACTUALIZAR INTERFAZ Y CONTINUAR
       setScanningStatus("🔍 Buscando código QR...");
       animationRef.current = requestAnimationFrame(scanFrame);
     } catch (e) {
       console.error("Error en escaneo de frame:", e);
       animationRef.current = requestAnimationFrame(scanFrame);
+    }
+  };
+
+  // 🔧 FUNCIÓN AUXILIAR: Mejorar contraste para QR pequeños
+  const enhanceContrast = (imageData: Uint8ClampedArray) => {
+    // Simple ajuste de contraste para hacer el QR más legible
+    for (let i = 0; i < imageData.length; i += 4) {
+      const r = imageData[i];
+      const g = imageData[i + 1];
+      const b = imageData[i + 2];
+
+      // Convertir a escala de grises
+      const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+
+      // Aumentar contraste (hacer oscuros más oscuros, claros más claros)
+      const contrasted =
+        gray < 128
+          ? Math.max(0, gray - 40) // Oscurecer
+          : Math.min(255, gray + 40); // Aclarar
+
+      imageData[i] = contrasted; // R
+      imageData[i + 1] = contrasted; // G
+      imageData[i + 2] = contrasted; // B
+      // Alpha se mantiene igual
+    }
+  };
+
+  // 🎯 VERSIÓN MÁS AVANZADA CON DETECCIÓN DE TAMAÑO
+  const scanFrameAdvanced = () => {
+    try {
+      if (!videoRef.current || !canvasRef.current) {
+        animationRef.current = requestAnimationFrame(scanFrameAdvanced);
+        return;
+      }
+
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+
+      if (!context || video.readyState !== video.HAVE_ENOUGH_DATA) {
+        animationRef.current = requestAnimationFrame(scanFrameAdvanced);
+        return;
+      }
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+
+      // ESTRATEGIA MULTINIVEL para QR pequeños
+      const detectionStrategies = [
+        // Nivel 1: Normal
+        { scale: 1, smoothing: true, contrast: false },
+        // Nivel 2: Escalado 1.5x
+        { scale: 1.5, smoothing: false, contrast: false },
+        // Nivel 3: Escalado 2x
+        { scale: 2, smoothing: false, contrast: false },
+        // Nivel 4: Con contraste
+        { scale: 1, smoothing: true, contrast: true },
+        // Nivel 5: Escalado + contraste
+        { scale: 1.5, smoothing: false, contrast: true },
+      ];
+
+      let qrCode = null;
+
+      for (const strategy of detectionStrategies) {
+        if (qrCode) break;
+
+        let processedImageData = imageData;
+
+        // Aplicar escalado si es necesario
+        if (strategy.scale !== 1) {
+          const tempCanvas = document.createElement("canvas");
+          tempCanvas.width = Math.floor(canvas.width * strategy.scale);
+          tempCanvas.height = Math.floor(canvas.height * strategy.scale);
+          const tempContext = tempCanvas.getContext("2d");
+
+          if (tempContext) {
+            tempContext.imageSmoothingEnabled = strategy.smoothing;
+            tempContext.drawImage(
+              canvas,
+              0,
+              0,
+              tempCanvas.width,
+              tempCanvas.height
+            );
+            processedImageData = tempContext.getImageData(
+              0,
+              0,
+              tempCanvas.width,
+              tempCanvas.height
+            );
+          }
+        }
+
+        // Aplicar mejora de contraste si es necesario
+        if (strategy.contrast) {
+          enhanceContrast(processedImageData.data);
+        }
+
+        qrCode = jsQR(
+          processedImageData.data,
+          processedImageData.width,
+          processedImageData.height,
+          {
+            inversionAttempts: "attemptBoth",
+          }
+        );
+
+        if (qrCode) {
+          console.log(
+            `🎯 QR detectado con estrategia: Escala ${strategy.scale}x, Contraste: ${strategy.contrast}`
+          );
+          break;
+        }
+      }
+
+      // ... el resto del código de procesamiento igual
+      if (qrCode) {
+        console.log("🎯 QR detectado:", qrCode.data);
+        setScanningStatus("✅ QR detectado - Procesando...");
+
+        const qrData = parseQRData(qrCode.data);
+
+        if (qrData) {
+          console.log("✅ Datos parseados correctamente:", qrData);
+          onScan(qrData);
+          handleClose();
+          return;
+        } else {
+          console.warn("❌ No se pudieron parsear los datos del QR");
+          setScanningStatus("❌ Formato QR no válido");
+          setTimeout(() => {
+            setScanningStatus("Escaneando...");
+            animationRef.current = requestAnimationFrame(scanFrameAdvanced);
+          }, 1000);
+          return;
+        }
+      }
+
+      setScanningStatus("🔍 Buscando código QR...");
+      animationRef.current = requestAnimationFrame(scanFrameAdvanced);
+    } catch (e) {
+      console.error("Error en escaneo de frame:", e);
+      animationRef.current = requestAnimationFrame(scanFrameAdvanced);
     }
   };
 
@@ -267,5 +495,3 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     </Dialog>
   );
 }
-
-
