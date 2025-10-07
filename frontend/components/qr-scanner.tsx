@@ -30,12 +30,17 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: "environment",
-          //width: { ideal: 1920 },
-          //height: { ideal: 1080 },
-        },
+          facingMode: "environment",      // usar cámara trasera
+          width: { ideal: 1920 },         // resolución horizontal Full HD
+          height: { ideal: 1080 },        // resolución vertical Full HD
+          advanced: [
+            { focusMode: "continuous" } as any, // activar autoenfoque continuo
+            { zoom: 2 } as any                  // aplicar zoom óptico (si disponible)
+          ]
+        } as any
       })
   
+      
       streamRef.current = stream
   
       if (videoRef.current) {
@@ -43,7 +48,9 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         await videoRef.current.play()
       }
   
-      setTimeout(() => scanFrame(), 600)
+      setTimeout(() => {
+        scanFrame()   // iniciar el bucle de escaneo después de ~0.6s
+      }, 600)
     } catch (err) {
       setError("No se pudo acceder a la cámara. Asegúrate de permitir los permisos de cámara.")
       setIsScanning(false)
