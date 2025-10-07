@@ -34,7 +34,6 @@ declare global {
   }
 }
 
-
 export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,18 +79,9 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
 
       // 3️⃣ - Aplicamos un zoom suave si está disponible
       if (capabilities.zoom) {
-        try {
-          const zoomTarget = Math.min(
-            capabilities.zoom.max,
-            (capabilities.zoom.max + capabilities.zoom.min) / 2
-          );
-          await videoTrack.applyConstraints({
-            advanced: [{ zoom: zoomTarget }],
-          });
-          console.log(`🔍 Zoom ajustado a ${zoomTarget}`);
-        } catch (err) {
-          console.warn("⚠️ No se pudo aplicar zoom", err);
-        }
+        await videoTrack.applyConstraints({
+          advanced: [{ zoom: capabilities.zoom.min }], // 👈 mínimo posible
+        });
       }
 
       // 4️⃣ - Iniciamos el video
