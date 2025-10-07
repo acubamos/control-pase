@@ -21,11 +21,6 @@ interface QRScannerProps {
 declare global {
   interface MediaTrackCapabilities {
     focusMode?: string[]; // algunos dispositivos devuelven ["continuous", "single-shot"]
-    zoom?: {
-      min: number;
-      max: number;
-      step: number;
-    };
   }
 
   interface MediaTrackConstraintSet {
@@ -53,8 +48,8 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: "environment" },
-          width: { ideal: 1920 }, // ← Máxima posible
-          height: { ideal: 1080 }, // ← Máxima posible
+          width: { ideal: 1280 }, // ← Máxima posible
+          height: { ideal: 720 }, // ← Máxima posible
           frameRate: { ideal: 30 }, // Balance entre fluidez y calidad
         },
       });
@@ -78,13 +73,6 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         } catch (err) {
           console.warn("⚠️ No se pudo aplicar enfoque continuo", err);
         }
-      }
-
-      // 3️⃣ - Aplicamos un zoom suave si está disponible
-      if (capabilities.zoom) {
-        await videoTrack.applyConstraints({
-          advanced: [{ zoom: capabilities.zoom.min }], // 👈 mínimo posible
-        });
       }
 
       // 4️⃣ - Iniciamos el video
@@ -121,81 +109,86 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   };
 
   const scanFrameSimplified = () => {
-  try {
-    if (!videoRef.current || !canvasRef.current) {
-      animationRef.current = requestAnimationFrame(scanFrameSimplified);
-      return;
-    }
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const context = canvas.getContext("2d", { willReadFrequently: true });
-
-    if (!context || video.readyState !== video.HAVE_ENOUGH_DATA) {
-      animationRef.current = requestAnimationFrame(scanFrameSimplified);
-      return;
-    }
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-
-    // ESTRATEGIA DOBLE: Normal + Escalado
-    let qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
-      inversionAttempts: "attemptBoth",
-    });
-
-    // Si falla, intentar con imagen escalada
-    if (!qrCode) {
-      const scale = 1.8;
-      const scaledWidth = Math.floor(canvas.width * scale);
-      const scaledHeight = Math.floor(canvas.height * scale);
-      
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = scaledWidth;
-      tempCanvas.height = scaledHeight;
-      const tempContext = tempCanvas.getContext('2d');
-      
-      if (tempContext) {
-        tempContext.imageSmoothingEnabled = false;
-        tempContext.drawImage(canvas, 0, 0, scaledWidth, scaledHeight);
-        const scaledImageData = tempContext.getImageData(0, 0, scaledWidth, scaledHeight);
-        
-        qrCode = jsQR(scaledImageData.data, scaledWidth, scaledHeight, {
-          inversionAttempts: "attemptBoth",
-        });
-      }
-    }
-
-    if (qrCode) {
-      console.log("🎯 QR detectado:", qrCode.data);
-      setScanningStatus("✅ QR detectado - Procesando...");
-
-      const qrData = parseQRData(qrCode.data);
-
-      if (qrData) {
-        onScan(qrData);
-        handleClose();
-        return;
-      } else {
-        setScanningStatus("❌ Formato QR no válido");
-        setTimeout(() => {
-          setScanningStatus("Escaneando...");
-          animationRef.current = requestAnimationFrame(scanFrameSimplified);
-        }, 1000);
+    try {
+      if (!videoRef.current || !canvasRef.current) {
+        animationRef.current = requestAnimationFrame(scanFrameSimplified);
         return;
       }
-    }
 
-    setScanningStatus("🔍 Buscando código QR...");
-    animationRef.current = requestAnimationFrame(scanFrameSimplified);
-  } catch (e) {
-    console.error("Error en escaneo de frame:", e);
-    animationRef.current = requestAnimationFrame(scanFrameSimplified);
-  }
-};
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+
+      if (!context || video.readyState !== video.HAVE_ENOUGH_DATA) {
+        animationRef.current = requestAnimationFrame(scanFrameSimplified);
+        return;
+      }
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+
+      // ESTRATEGIA DOBLE: Normal + Escalado
+      let qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: "attemptBoth",
+      });
+
+      // Si falla, intentar con imagen escalada
+      if (!qrCode) {
+        const scale = 1.8;
+        const scaledWidth = Math.floor(canvas.width * scale);
+        const scaledHeight = Math.floor(canvas.height * scale);
+
+        const tempCanvas = document.createElement("canvas");
+        tempCanvas.width = scaledWidth;
+        tempCanvas.height = scaledHeight;
+        const tempContext = tempCanvas.getContext("2d");
+
+        if (tempContext) {
+          tempContext.imageSmoothingEnabled = false;
+          tempContext.drawImage(canvas, 0, 0, scaledWidth, scaledHeight);
+          const scaledImageData = tempContext.getImageData(
+            0,
+            0,
+            scaledWidth,
+            scaledHeight
+          );
+
+          qrCode = jsQR(scaledImageData.data, scaledWidth, scaledHeight, {
+            inversionAttempts: "attemptBoth",
+          });
+        }
+      }
+
+      if (qrCode) {
+        console.log("🎯 QR detectado:", qrCode.data);
+        setScanningStatus("✅ QR detectado - Procesando...");
+
+        const qrData = parseQRData(qrCode.data);
+
+        if (qrData) {
+          onScan(qrData);
+          handleClose();
+          return;
+        } else {
+          setScanningStatus("❌ Formato QR no válido");
+          setTimeout(() => {
+            setScanningStatus("Escaneando...");
+            animationRef.current = requestAnimationFrame(scanFrameSimplified);
+          }, 1000);
+          return;
+        }
+      }
+
+      setScanningStatus("🔍 Buscando código QR...");
+      animationRef.current = requestAnimationFrame(scanFrameSimplified);
+    } catch (e) {
+      console.error("Error en escaneo de frame:", e);
+      animationRef.current = requestAnimationFrame(scanFrameSimplified);
+    }
+  };
 
   // 🔧 FUNCIÓN AUXILIAR: Mejorar contraste para QR pequeños
   const enhanceContrast = (imageData: Uint8ClampedArray) => {
