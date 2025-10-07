@@ -80,11 +80,11 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       }
 
       // 3️⃣ - Aplicamos un zoom suave si está disponible
-      if (capabilities.zoom) {
-        await videoTrack.applyConstraints({
-          advanced: [{ zoom: capabilities.zoom.min }], // 👈 mínimo posible
-        });
-      }
+      // if (capabilities.zoom) {
+      //   await videoTrack.applyConstraints({
+      //     advanced: [{ zoom: capabilities.zoom.min }], // 👈 mínimo posible
+      //   });
+      // }
 
       // 4️⃣ - Iniciamos el video
       if (videoRef.current) {
