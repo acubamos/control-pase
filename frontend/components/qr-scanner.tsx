@@ -36,14 +36,19 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: "environment",
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-          advanced: [
-            { focusMode: "continuous" } as any,
-            //{ zoom: 1.5 } as any, // zoom moderado para acercar el QR sin perder foco
-          ],
-        } as any,
-      });
+          width: { ideal: 1280 },
+          height: { ideal: 720 },         
+        },
+      })
+      
+      const [track] = stream.getVideoTracks()
+      await track.applyConstraints({
+        advanced: [
+          { focusMode: "continuous" },
+          { zoom: 1.3 }
+        ] as any,        
+      })
+      
 
       streamRef.current = stream;
 
