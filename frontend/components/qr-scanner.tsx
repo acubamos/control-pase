@@ -27,23 +27,62 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | null>(null);
 
+  // 📌 Lista de resoluciones a probar automáticamente
+  const resolutions = [
+    { width: 1920, height: 1080 }, // Full HD
+    { width: 1280, height: 720 },  // HD
+    { width: 640, height: 480 },   // VGA
+    { width: 320, height: 240 },   // QVGA (último recurso)
+  ];
+
+  // 📌 Función para detectar la mejor resolución soportada
+  const detectBestResolution = async (): Promise<{ width: number; height: number } | null> => {
+    for (const r of resolutions) {
+      try {
+        const testStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: "environment",
+            width: { ideal: r.width },
+            height: { ideal: r.height },
+          },
+        });
+        console.log(`✅ Soportada: ${r.width}x${r.height}`);
+        testStream.getTracks().forEach((t) => t.stop());
+        return r; // 👉 Devuelve la primera resolución que funcione
+      } catch {
+        console.log(`❌ No soportada: ${r.width}x${r.height}`);
+      }
+    }
+    return null;
+  };
+
   const startCamera = async () => {
     try {
       setError(null);
       setIsScanning(true);
       setScanningStatus("Escaneando...");
 
+      // 🔍 Detectar automáticamente la mejor resolución soportada
+      const bestRes = await detectBestResolution();
+      if (!bestRes) {
+        setError("No se encontró ninguna resolución de cámara compatible.");
+        setIsScanning(false);
+        return;
+      }
+
+      console.log(`📸 Usando resolución: ${bestRes.width}x${bestRes.height}`);
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: "environment",
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },  
+          width: { ideal: bestRes.width },
+          height: { ideal: bestRes.height },
           advanced: [
             { focusMode: "continuous" } as any,
             //{ zoom: 1.3 } as any
-          ]       
+          ]  
         },
-      })   
+      });     
 
       streamRef.current = stream;
 
@@ -53,9 +92,10 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       }
 
       setTimeout(() => {
-        scanFrame();
+        scanFrame(); // iniciar el bucle de escaneo después de un breve delay
       }, 800);
     } catch (err) {
+      console.error(err);
       setError(
         "No se pudo acceder a la cámara. Asegúrate de permitir los permisos de cámara."
       );
@@ -100,7 +140,6 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
       const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-
       const qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
         inversionAttempts: "attemptBoth",
       });
@@ -110,7 +149,6 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         setScanningStatus("✅ QR detectado - Procesando...");
 
         const qrData = parseQRData(qrCode.data);
-
         if (qrData) {
           console.log("✅ Datos parseados correctamente:", qrData);
           onScan(qrData);
@@ -141,7 +179,6 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   };
 
   const simulateScan = () => {
-    // Función para simular un escaneo en desarrollo
     const mockQRText = "N:HASSAN ALEJANDROA:RODRIGUEZ PEREZCI:99032608049";
     console.log("🧪 Simulando escaneo con:", mockQRText);
 
@@ -158,7 +195,6 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     } else {
       stopCamera();
     }
-
     return () => {
       stopCamera();
     };
