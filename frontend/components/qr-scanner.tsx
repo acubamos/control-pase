@@ -40,7 +40,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
           height: { ideal: 720 },
           advanced: [
             { focusMode: "continuous" } as any,
-            { zoom: 1.5 } as any, // zoom moderado para acercar el QR sin perder foco
+            //{ zoom: 1.5 } as any, // zoom moderado para acercar el QR sin perder foco
           ],
         } as any,
       });
