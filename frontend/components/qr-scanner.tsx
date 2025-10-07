@@ -36,8 +36,8 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: "environment",
-          width: { ideal: 1280 },
-          height: { ideal: 720 },  
+          width: { ideal: 640 },
+          height: { ideal: 480 },  
           advanced: [
             { focusMode: "continuous" } as any,
             //{ zoom: 1.3 } as any
@@ -53,7 +53,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       }
 
       setTimeout(() => {
-        scanFrame(); // iniciar el bucle de escaneo después de ~0.6s
+        scanFrame();
       }, 800);
     } catch (err) {
       setError(
