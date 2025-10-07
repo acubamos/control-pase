@@ -17,6 +17,23 @@ interface QRScannerProps {
   isOpen: boolean;
   onClose: () => void;
 }
+// ✅ Extensión local de tipos para capacidades no estándar
+declare global {
+  interface MediaTrackCapabilities {
+    focusMode?: string[]; // algunos dispositivos devuelven ["continuous", "single-shot"]
+    zoom?: {
+      min: number;
+      max: number;
+      step: number;
+    };
+  }
+
+  interface MediaTrackConstraintSet {
+    focusMode?: string;
+    zoom?: number;
+  }
+}
+
 
 export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   const [isScanning, setIsScanning] = useState(false);
@@ -31,32 +48,66 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     try {
       setError(null);
       setIsScanning(true);
-      setScanningStatus("Escaneando...");
+      setScanningStatus("Iniciando cámara...");
 
+      // 1️⃣ - Abrimos la cámara sin forzar resolución
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: "environment",
-          width: { min: 640, max: 1920 },
-          height: { min: 480, max: 1080 },
-          // advanced: [
-          //   { focusMode: "continuous" } as any,           
-          // ],
         },
       });
 
       streamRef.current = stream;
 
+      const videoTrack = stream.getVideoTracks()[0];
+      const capabilities = videoTrack.getCapabilities();
+      console.log("📷 Capacidades detectadas:", capabilities);
+
+      // 2️⃣ - Aplicamos enfoque continuo si está soportado
+      if (
+        capabilities.focusMode &&
+        capabilities.focusMode.includes("continuous")
+      ) {
+        try {
+          await videoTrack.applyConstraints({
+            advanced: [{ focusMode: "continuous" } as any],
+          });
+          console.log("✅ Enfoque continuo activado");
+        } catch (err) {
+          console.warn("⚠️ No se pudo aplicar enfoque continuo", err);
+        }
+      }
+
+      // 3️⃣ - Aplicamos un zoom suave si está disponible
+      if (capabilities.zoom) {
+        try {
+          const zoomTarget = Math.min(
+            capabilities.zoom.max,
+            (capabilities.zoom.max + capabilities.zoom.min) / 2
+          );
+          await videoTrack.applyConstraints({
+            advanced: [{ zoom: zoomTarget }],
+          });
+          console.log(`🔍 Zoom ajustado a ${zoomTarget}`);
+        } catch (err) {
+          console.warn("⚠️ No se pudo aplicar zoom", err);
+        }
+      }
+
+      // 4️⃣ - Iniciamos el video
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
 
+      setScanningStatus("📡 Escaneando...");
       setTimeout(() => {
         scanFrame();
       }, 800);
     } catch (err) {
+      console.error("❌ Error iniciando cámara:", err);
       setError(
-        "No se pudo acceder a la cámara. Asegúrate de permitir los permisos de cámara."
+        "No se pudo acceder a la cámara. Asegúrate de permitir los permisos."
       );
       setIsScanning(false);
     }
