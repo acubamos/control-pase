@@ -36,11 +36,11 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: "environment",
-          width: { ideal: 2560 }, // resolución mayor que Full HD (2K si está disponible)
-          height: { ideal: 1440 },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
           advanced: [
             { focusMode: "continuous" } as any,
-            { zoom: 1.8 } as any, // zoom moderado para acercar el QR sin perder foco
+            { zoom: 1.5 } as any, // zoom moderado para acercar el QR sin perder foco
           ],
         } as any,
       });
@@ -92,7 +92,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         animationRef.current = requestAnimationFrame(scanFrame);
         return;
       }
-     
+
       const scale = 1;
       canvas.width = video.videoWidth * scale;
       canvas.height = video.videoHeight * scale;
