@@ -1,163 +1,168 @@
-"use client"
+"use client";
 
-import { useState, useRef, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Camera, X } from "lucide-react"
-import { parseQRData, type QRData } from "@/lib/qr-scanner"
-import jsQR from "jsqr"
+import { useState, useRef, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Camera, X } from "lucide-react";
+import { parseQRData, type QRData } from "@/lib/qr-scanner";
+import jsQR from "jsqr";
 
 interface QRScannerProps {
-  onScan: (data: QRData) => void
-  isOpen: boolean
-  onClose: () => void
+  onScan: (data: QRData) => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
-  const [isScanning, setIsScanning] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [scanningStatus, setScanningStatus] = useState("Escaneando...")
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const streamRef = useRef<MediaStream | null>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const animationRef = useRef<number | null>(null)
+  const [isScanning, setIsScanning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [scanningStatus, setScanningStatus] = useState("Escaneando...");
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animationRef = useRef<number | null>(null);
 
   const startCamera = async () => {
     try {
-      setError(null)
-      setIsScanning(true)
-      setScanningStatus("Escaneando...")
-  
+      setError(null);
+      setIsScanning(true);
+      setScanningStatus("Escaneando...");
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: "environment",      // usar cámara trasera
-          width: { ideal: 1920 },         // resolución horizontal Full HD
-          height: { ideal: 1080 },        // resolución vertical Full HD
+          facingMode: "environment",
+          width: { ideal: 2560 }, // resolución mayor que Full HD (2K si está disponible)
+          height: { ideal: 1440 },
           advanced: [
-            { focusMode: "continuous" } as any, // activar autoenfoque continuo
-            { zoom: 2 } as any                  // aplicar zoom óptico (si disponible)
-          ]
-        } as any
-      })
-  
-      
-      streamRef.current = stream
-  
+            { focusMode: "continuous" } as any,
+            { zoom: 1.8 } as any, // zoom moderado para acercar el QR sin perder foco
+          ],
+        } as any,
+      });
+
+      streamRef.current = stream;
+
       if (videoRef.current) {
-        videoRef.current.srcObject = stream
-        await videoRef.current.play()
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
       }
-  
+
       setTimeout(() => {
-        scanFrame()   // iniciar el bucle de escaneo después de ~0.6s
-      }, 600)
+        scanFrame(); // iniciar el bucle de escaneo después de ~0.6s
+      }, 800);
     } catch (err) {
-      setError("No se pudo acceder a la cámara. Asegúrate de permitir los permisos de cámara.")
-      setIsScanning(false)
+      setError(
+        "No se pudo acceder a la cámara. Asegúrate de permitir los permisos de cámara."
+      );
+      setIsScanning(false);
     }
-  }
+  };
 
   const stopCamera = () => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop())
-      streamRef.current = null
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     }
 
     if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current)
-      animationRef.current = null
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
     }
 
-    setIsScanning(false)
-  }
+    setIsScanning(false);
+  };
 
   const scanFrame = () => {
     try {
       if (!videoRef.current || !canvasRef.current) {
-        animationRef.current = requestAnimationFrame(scanFrame)
-        return
+        animationRef.current = requestAnimationFrame(scanFrame);
+        return;
       }
-  
-      const video = videoRef.current
-      const canvas = canvasRef.current
-      const context = canvas.getContext("2d", { willReadFrequently: true })
-  
+
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+
       if (!context || video.readyState !== video.HAVE_ENOUGH_DATA) {
-        animationRef.current = requestAnimationFrame(scanFrame)
-        return
+        animationRef.current = requestAnimationFrame(scanFrame);
+        return;
       }
-  
-      // Escalado para mejorar rendimiento (50%)
-      const scale = 1
-      canvas.width = video.videoWidth * scale
-      canvas.height = video.videoHeight * scale
-  
-      context.drawImage(video, 0, 0, canvas.width, canvas.height)
-  
-      const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-  
+     
+      const scale = 1;
+      canvas.width = video.videoWidth * scale;
+      canvas.height = video.videoHeight * scale;
+
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+
       const qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
         inversionAttempts: "attemptBoth",
-      })
-  
+      });
+
       if (qrCode) {
-        console.log("🎯 QR detectado:", qrCode.data)
-        setScanningStatus("✅ QR detectado - Procesando...")
-  
-        const qrData = parseQRData(qrCode.data)
-  
+        console.log("🎯 QR detectado:", qrCode.data);
+        setScanningStatus("✅ QR detectado - Procesando...");
+
+        const qrData = parseQRData(qrCode.data);
+
         if (qrData) {
-          console.log("✅ Datos parseados correctamente:", qrData)
-          onScan(qrData)
-          handleClose()
-          return
+          console.log("✅ Datos parseados correctamente:", qrData);
+          onScan(qrData);
+          handleClose();
+          return;
         } else {
-          console.warn("❌ No se pudieron parsear los datos del QR")
-          setScanningStatus("❌ Formato QR no válido")
+          console.warn("❌ No se pudieron parsear los datos del QR");
+          setScanningStatus("❌ Formato QR no válido");
           setTimeout(() => {
-            setScanningStatus("Escaneando...")
-            animationRef.current = requestAnimationFrame(scanFrame)
-          }, 1000)
-          return
+            setScanningStatus("Escaneando...");
+            animationRef.current = requestAnimationFrame(scanFrame);
+          }, 1000);
+          return;
         }
       }
-  
-      setScanningStatus("🔍 Buscando código QR...")
-      animationRef.current = requestAnimationFrame(scanFrame)
+
+      setScanningStatus("🔍 Buscando código QR...");
+      animationRef.current = requestAnimationFrame(scanFrame);
     } catch (e) {
-      console.error("Error en escaneo de frame:", e)
-      animationRef.current = requestAnimationFrame(scanFrame)
+      console.error("Error en escaneo de frame:", e);
+      animationRef.current = requestAnimationFrame(scanFrame);
     }
-  }
+  };
 
   const handleClose = () => {
-    stopCamera()
-    onClose()
-  }
+    stopCamera();
+    onClose();
+  };
 
   const simulateScan = () => {
     // Función para simular un escaneo en desarrollo
-    const mockQRText = "N:HASSAN ALEJANDROA:RODRIGUEZ PEREZCI:99032608049"
-    console.log("🧪 Simulando escaneo con:", mockQRText)
-    
-    const qrData = parseQRData(mockQRText)
+    const mockQRText = "N:HASSAN ALEJANDROA:RODRIGUEZ PEREZCI:99032608049";
+    console.log("🧪 Simulando escaneo con:", mockQRText);
+
+    const qrData = parseQRData(mockQRText);
     if (qrData) {
-      onScan(qrData)
-      handleClose()
+      onScan(qrData);
+      handleClose();
     }
-  }
+  };
 
   useEffect(() => {
     if (isOpen) {
-      startCamera()
+      startCamera();
     } else {
-      stopCamera()
+      stopCamera();
     }
 
     return () => {
-      stopCamera()
-    }
-  }, [isOpen])
+      stopCamera();
+    };
+  }, [isOpen]);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -179,11 +184,11 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
             </div>
           ) : (
             <div className="relative">
-              <video 
-                ref={videoRef} 
-                className="w-full h-64 bg-black rounded-lg object-cover" 
-                playsInline 
-                muted 
+              <video
+                ref={videoRef}
+                className="w-full h-64 bg-black rounded-lg object-cover"
+                playsInline
+                muted
               />
               <canvas ref={canvasRef} className="hidden" />
 
@@ -217,5 +222,5 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
