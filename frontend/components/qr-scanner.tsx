@@ -56,8 +56,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
           // width: { ideal: 640 },
           // height: { ideal: 480 },
           width: { ideal: 1280 },   // Buena resolución
-          height: { ideal: 720 },   // Detalle suficiente
-          frameRate: { ideal: 30 }  // Fluidez buena
+          height: { ideal: 720 },   // Detalle suficiente          
         },
       });
 
