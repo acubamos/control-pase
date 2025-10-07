@@ -267,3 +267,5 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     </Dialog>
   );
 }
+
+
