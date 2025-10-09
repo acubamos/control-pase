@@ -316,358 +316,361 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
           </div>
         </div>
       </header>
+  
+      {/* Contenido principal - se expande para empujar el footer hacia abajo */}
       <div className="flex-1">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Estadísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <BarChart3 className="h-6 w-6 text-blue-600" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Estadísticas */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <BarChart3 className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">
+                      Total Entradas
+                    </p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {stats.total}
+                    </p>
+                  </div>
                 </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">
-                    Total Entradas
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {stats.total}
-                  </p>
+              </CardContent>
+            </Card>
+  
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <Users className="h-6 w-6 text-green-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">
+                      Con Salida
+                    </p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {stats.withExit}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+  
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-yellow-100 rounded-lg">
+                    <Clock className="h-6 w-6 text-yellow-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">
+                      Sin Salida
+                    </p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {stats.withoutExit}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+  
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <TrendingUp className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-600">Hoy</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {stats.todayEntries}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+  
+          {/* Controles */}
+          <Card className="mb-6">
+            <CardContent className="p-6">
+              <div className="flex flex-col lg:flex-row gap-4">
+                {/* Búsqueda */}             
+                {/* Botones de acción */}
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => setShowFilters(!showFilters)}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Filter className="h-4 w-4 mr-2" />
+                    Filtros
+                  </Button>
+                  {/* {selectedEntries.length > 0 && (
+                    <Button onClick={handleDeleteSelected} variant="destructive" size="sm">
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Eliminar ({selectedEntries.length})
+                    </Button>
+                  )} */} 
+                  <ExportMenu entries={filteredEntries} />
                 </div>
               </div>
+  
+              {/* Panel de Filtros */}
+              {showFilters && (
+                <div className="mt-6 pt-6 border-t">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Fecha Desde
+                      </label>
+                      <Input
+                        type="date"
+                        value={filters.dateFrom}
+                        onChange={(e) =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            dateFrom: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+  
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Fecha Hasta
+                      </label>
+                      <Input
+                        type="date"
+                        value={filters.dateTo}
+                        onChange={(e) =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            dateTo: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+  
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Tipo de Vehículo
+                      </label>
+                      <Select
+                        value={filters.vehicleType}
+                        onValueChange={(value) =>
+                          setFilters((prev) => ({ ...prev, vehicleType: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Todos" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          <SelectItem value="Carro">Carro</SelectItem>
+                          <SelectItem value="Moto">Moto</SelectItem>
+                          <SelectItem value="Camión">Camión</SelectItem>
+                          <SelectItem value="Camioneta">Camioneta</SelectItem>
+                          <SelectItem value="Bus">Bus</SelectItem>
+                          <SelectItem value="Bicicleta">N/A</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+  
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Ubicación
+                      </label>
+                      <Input
+                        placeholder="Filtrar por ubicación"
+                        value={filters.location}
+                        onChange={(e) =>
+                          setFilters((prev) => ({
+                            ...prev,
+                            location: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+  
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Estado de Salida
+                      </label>
+                      <Select
+                        value={filters.hasExitDate}
+                        onValueChange={(value) =>
+                          setFilters((prev) => ({ ...prev, hasExitDate: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          <SelectItem value="yes">Con salida</SelectItem>
+                          <SelectItem value="no">Sin salida</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+  
+                  <div className="mt-4 flex gap-2">
+                    <Button
+                      onClick={() =>
+                        setFilters({
+                          dateFrom: "",
+                          dateTo: "",
+                          vehicleType: "all",
+                          location: "",
+                          hasExitDate: "all",
+                        })
+                      }
+                      variant="outline"
+                      size="sm"
+                    >
+                      Limpiar Filtros
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
-
+  
+          {/* Lista de Entradas */}
           <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Users className="h-6 w-6 text-green-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">
-                    Con Salida
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {stats.withExit}
-                  </p>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle>Entradas ({filteredEntries.length})</CardTitle>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    checked={
+                      selectedEntries.length === filteredEntries.length &&
+                      filteredEntries.length > 0
+                    }
+                    onCheckedChange={handleSelectAll}
+                  />
+                  <span className="text-sm text-gray-600">Seleccionar todo</span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-yellow-100 rounded-lg">
-                  <Clock className="h-6 w-6 text-yellow-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">
-                    Sin Salida
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {filteredEntries.length === 0 ? (
+                  <p className="text-center text-gray-500 py-8">
+                    No se encontraron entradas con los filtros aplicados
                   </p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {stats.withoutExit}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <TrendingUp className="h-6 w-6 text-purple-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Hoy</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {stats.todayEntries}
-                  </p>
-                </div>
+                ) : (
+                  filteredEntries.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="border rounded-lg p-4 space-y-3"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-start gap-3">
+                          <Checkbox
+                            checked={selectedEntries.includes(entry.id)}
+                            onCheckedChange={(checked) =>
+                              handleSelectEntry(entry.id, checked as boolean)
+                            }
+                          />
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4 text-gray-500" />
+                              <span className="font-medium">
+                                {entry.nombre} {entry.apellidos}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <span>CI: {entry.ci}</span>
+                            </div>
+                          </div>
+                        </div>                      
+                      </div>
+  
+                      <div className="flex items-center gap-2">
+                        <Car className="h-4 w-4 text-gray-500" />
+                        <div className="flex gap-1">
+                          {entry.tipoVehiculo.map((tipo) => (
+                            <Badge
+                              key={tipo}
+                              variant="secondary"
+                              className="text-xs"
+                            >
+                              {tipo}
+                            </Badge>
+                          ))}
+                        </div>                     
+                      </div>
+  
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4 text-gray-500" />
+                        <div className="flex flex-wrap gap-1">
+                          {Object.entries(entry.lugarDestino).map(
+                            ([lugar, sublugares]) =>
+                              sublugares.map((sublugar) => (
+                                <Badge
+                                  key={`${lugar}-${sublugar}`}
+                                  variant="outline"
+                                  className="text-xs"
+                                >
+                                  {lugar} - {sublugar}
+                                </Badge>
+                              ))
+                          )}
+                        </div>
+                      </div>
+  
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Calendar className="h-4 w-4" />
+                        <span>Entrada: {formatDateTime(entry.fechaEntrada)}</span>
+                        {entry.fechaSalida && (
+                          <span>
+                            • Salida: {formatDateTime(entry.fechaSalida)}
+                          </span>
+                        )}
+                      </div>
+  
+                      {/* Botón para registrar salida */}
+                      {!entry.fechaSalida && (
+                          <div className="pt-2">
+                            <Button
+                              onClick={() => handleRegisterExit(entry.id)}
+                              variant="outline"
+                              size="sm"
+                              className="w-full"
+                            >
+                              <LogOut className="h-4 w-4 mr-2" />
+                              Registrar Salida
+                            </Button>
+                          </div>
+                        )}
+  
+                      {entry.photoUrl && (
+                        <div className="mt-2 flex items-center gap-2">                       
+                          <div className="flex gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewPhoto(entry.photoUrl ?? "")}
+                              title="Ver foto"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
         </div>
-
-        {/* Controles */}
-        <Card className="mb-6">
-          <CardContent className="p-6">
-            <div className="flex flex-col lg:flex-row gap-4">
-              {/* Búsqueda */}             
-              {/* Botones de acción */}
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => setShowFilters(!showFilters)}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filtros
-                </Button>
-                {/* {selectedEntries.length > 0 && (
-                  <Button onClick={handleDeleteSelected} variant="destructive" size="sm">
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Eliminar ({selectedEntries.length})
-                  </Button>
-                )} */} 
-                <ExportMenu entries={filteredEntries} />
-              </div>
-            </div>
-
-            {/* Panel de Filtros */}
-            {showFilters && (
-              <div className="mt-6 pt-6 border-t">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Fecha Desde
-                    </label>
-                    <Input
-                      type="date"
-                      value={filters.dateFrom}
-                      onChange={(e) =>
-                        setFilters((prev) => ({
-                          ...prev,
-                          dateFrom: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Fecha Hasta
-                    </label>
-                    <Input
-                      type="date"
-                      value={filters.dateTo}
-                      onChange={(e) =>
-                        setFilters((prev) => ({
-                          ...prev,
-                          dateTo: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Tipo de Vehículo
-                    </label>
-                    <Select
-                      value={filters.vehicleType}
-                      onValueChange={(value) =>
-                        setFilters((prev) => ({ ...prev, vehicleType: value }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Todos" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos</SelectItem>
-                        <SelectItem value="Carro">Carro</SelectItem>
-                        <SelectItem value="Moto">Moto</SelectItem>
-                        <SelectItem value="Camión">Camión</SelectItem>
-                        <SelectItem value="Camioneta">Camioneta</SelectItem>
-                        <SelectItem value="Bus">Bus</SelectItem>
-                        <SelectItem value="Bicicleta">N/A</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Ubicación
-                    </label>
-                    <Input
-                      placeholder="Filtrar por ubicación"
-                      value={filters.location}
-                      onChange={(e) =>
-                        setFilters((prev) => ({
-                          ...prev,
-                          location: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Estado de Salida
-                    </label>
-                    <Select
-                      value={filters.hasExitDate}
-                      onValueChange={(value) =>
-                        setFilters((prev) => ({ ...prev, hasExitDate: value }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos</SelectItem>
-                        <SelectItem value="yes">Con salida</SelectItem>
-                        <SelectItem value="no">Sin salida</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex gap-2">
-                  <Button
-                    onClick={() =>
-                      setFilters({
-                        dateFrom: "",
-                        dateTo: "",
-                        vehicleType: "all",
-                        location: "",
-                        hasExitDate: "all",
-                      })
-                    }
-                    variant="outline"
-                    size="sm"
-                  >
-                    Limpiar Filtros
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Lista de Entradas */}
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle>Entradas ({filteredEntries.length})</CardTitle>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  checked={
-                    selectedEntries.length === filteredEntries.length &&
-                    filteredEntries.length > 0
-                  }
-                  onCheckedChange={handleSelectAll}
-                />
-                <span className="text-sm text-gray-600">Seleccionar todo</span>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {filteredEntries.length === 0 ? (
-                <p className="text-center text-gray-500 py-8">
-                  No se encontraron entradas con los filtros aplicados
-                </p>
-              ) : (
-                filteredEntries.map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="border rounded-lg p-4 space-y-3"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex items-start gap-3">
-                        <Checkbox
-                          checked={selectedEntries.includes(entry.id)}
-                          onCheckedChange={(checked) =>
-                            handleSelectEntry(entry.id, checked as boolean)
-                          }
-                        />
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-gray-500" />
-                            <span className="font-medium">
-                              {entry.nombre} {entry.apellidos}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <span>CI: {entry.ci}</span>
-                          </div>
-                        </div>
-                      </div>                      
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Car className="h-4 w-4 text-gray-500" />
-                      <div className="flex gap-1">
-                        {entry.tipoVehiculo.map((tipo) => (
-                          <Badge
-                            key={tipo}
-                            variant="secondary"
-                            className="text-xs"
-                          >
-                            {tipo}
-                          </Badge>
-                        ))}
-                      </div>                     
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-gray-500" />
-                      <div className="flex flex-wrap gap-1">
-                        {Object.entries(entry.lugarDestino).map(
-                          ([lugar, sublugares]) =>
-                            sublugares.map((sublugar) => (
-                              <Badge
-                                key={`${lugar}-${sublugar}`}
-                                variant="outline"
-                                className="text-xs"
-                              >
-                                {lugar} - {sublugar}
-                              </Badge>
-                            ))
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Calendar className="h-4 w-4" />
-                      <span>Entrada: {formatDateTime(entry.fechaEntrada)}</span>
-                      {entry.fechaSalida && (
-                        <span>
-                          • Salida: {formatDateTime(entry.fechaSalida)}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Botón para registrar salida */}
-                    {!entry.fechaSalida && (
-                        <div className="pt-2">
-                          <Button
-                            onClick={() => handleRegisterExit(entry.id)}
-                            variant="outline"
-                            size="sm"
-                            className="w-full"
-                          >
-                            <LogOut className="h-4 w-4 mr-2" />
-                            Registrar Salida
-                          </Button>
-                        </div>
-                      )}
-
-                    {entry.photoUrl && (
-                      <div className="mt-2 flex items-center gap-2">                       
-                        <div className="flex gap-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleViewPhoto(entry.photoUrl ?? "")}
-                            title="Ver foto"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
       </div>
-
+  
       {/* Modal de ver foto en grande */}
       <Dialog
         open={!!selectedPhoto}
@@ -701,12 +704,13 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+  
+      {/* Footer - siempre al fondo */}
       <footer className="bg-blue-800 text-white py-4 mt-auto">
         <div className="container mx-auto px-4 text-center">
           <p>© 2025 Acubamos SURL. Todos los derechos reservados.</p>
         </div>
       </footer>
     </div>
-    </div> 
   );
 }
