@@ -31,7 +31,6 @@ interface UserMenuProps {
 export function UserMenu({ onLogout }: UserMenuProps) {
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
   const [showCleanupDialog, setShowCleanupDialog] = useState(false)
-  const [isCleaningUp, setIsCleaningUp] = useState(false)
 
   const user = authService.getCurrentUser()
   const roleDescription = authService.getRoleDescription()
@@ -44,38 +43,6 @@ export function UserMenu({ onLogout }: UserMenuProps) {
       description: "Has cerrado sesión exitosamente",
     })
   }
-
-  const handleManualCleanup = async () => {
-    if (!user?.permissions.canManageUsers) {
-      toast({
-        title: "Sin permisos",
-        description: "No tienes permisos para realizar esta acción",
-        variant: "destructive",
-      })
-      return
-    }
-
-    try {
-      setIsCleaningUp(true)
-      const result = await authService.manualCleanup()
-
-      toast({
-        title: result.success ? "Limpieza exitosa" : "Error en limpieza",
-        description: result.message,
-        variant: result.success ? "default" : "destructive",
-      })
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Error al realizar la limpieza",
-        variant: "destructive",
-      })
-    } finally {
-      setIsCleaningUp(false)
-      setShowCleanupDialog(false)
-    }
-  }
-
   const getRoleIcon = () => {
     if (!user) return <User className="h-4 w-4" />
 
@@ -151,29 +118,6 @@ export function UserMenu({ onLogout }: UserMenuProps) {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleLogout}>Cerrar Sesión</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Dialog de confirmación de limpieza */}
-      <AlertDialog open={showCleanupDialog} onOpenChange={setShowCleanupDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Limpiar base de datos?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción eliminará TODAS las entradas de la base de datos de forma permanente. Esta acción no se puede
-              deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isCleaningUp}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleManualCleanup}
-              disabled={isCleaningUp}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {isCleaningUp ? "Limpiando..." : "Confirmar Limpieza"}
-            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

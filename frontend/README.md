@@ -1,4 +1,4 @@
-# Sistema de Gestión de Entradas Vehiculares
+# SISCOP Vehiculares
 
 Sistema completo para el control de acceso vehicular con autenticación por roles, escaneo QR y captura de fotos.
 

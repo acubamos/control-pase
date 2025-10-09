@@ -46,6 +46,7 @@ import {
   type CreateVehicleEntry,
 } from "@/lib/api-services";
 import type { QRData } from "@/lib/qr-scanner";
+import Image from "next/image";
 
 const VEHICLE_TYPES = ["Carro", "Moto", "Camión", "Camioneta", "Bus", "N/A"];
 
@@ -251,18 +252,18 @@ export default function VehicleEntrySystem() {
 
   const handleQRScan = (qrData: QRData) => {
     console.log("👨‍👦‍👦 Padre recibió datos QR:", qrData);
-    
+
     // Actualizar el estado inmediatamente
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       nombre: qrData.nombre,
       apellidos: qrData.apellidos,
-      ci: qrData.ci
+      ci: qrData.ci,
     }));
-    
+
     // Cerrar el modal
     setShowQRScanner(false);
-    
+
     toast({
       title: "QR Escaneado",
       description: "Datos cargados desde el código QR",
@@ -525,10 +526,16 @@ export default function VehicleEntrySystem() {
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div>
-              <h1 className="text-xl font-semibold text-gray-900">
-                Sistema de Gestión de Entradas
-              </h1>
+            <div className="flex items-center gap-2">
+              <Image
+                src="/Fondo2.png"
+                alt="Logo SISCOP"
+                width={50}
+                height={50}
+                className="py-4"
+                priority
+              />
+              <h1 className="text-xl font-semibold text-gray-900">SISCOP</h1>
             </div>
             <div className="flex items-center gap-4">
               <Button

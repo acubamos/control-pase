@@ -701,19 +701,12 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Modal de Captura de Foto */}
-      {/* {selectedEntryForPhoto && (
-        <PhotoCapture
-          entryId={selectedEntryForPhoto}
-          isOpen={showPhotoCapture}
-          onClose={() => {
-            setShowPhotoCapture(false)
-            setSelectedEntryForPhoto(null)
-          }}
-          onPhotoUploaded={handlePhotoUploaded}
-        />
-      )} */}
+      <footer className="bg-blue-800 text-white py-4 mt-auto">
+        <div className="container mx-auto px-4 text-center">
+          <p>© 2025 Acubamos SURL. Todos los derechos reservados.</p>
+        </div>
+      </footer>
     </div>
+    
   );
 }
