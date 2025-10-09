@@ -298,7 +298,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen flex flex-col bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -316,7 +316,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
           </div>
         </div>
       </header>
-
+      <div className="flex-1">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Estadísticas */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -707,6 +707,6 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
         </div>
       </footer>
     </div>
-    
+    </div> 
   );
 }
