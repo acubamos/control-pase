@@ -139,18 +139,30 @@ class ApiService {
     return await response.json()
   }
 
-  async getPhoto(photoUrL: string): Promise<Blob> {
-    const response = await fetch(`https://apicp.acubamos.cu${photoUrL}`, {
+  // async getPhoto(photoUrL: string): Promise<Blob> {
+  //   const response = await fetch(`https://apicp.acubamos.cu${photoUrL}`, {
+  //     method: "GET",
+  //     credentials: "include",
+  //   })
+  
+  //   if (!response.ok) {
+  //     throw new Error("No se pudo obtener la foto")
+  //   }
+  
+  //   return await response.blob()
+  // }  
+  async getPhoto(entryId: string): Promise<Blob> {
+    const response = await fetch(`https://apicp.acubamos.cu/entries${entryId}/photo`, {
       method: "GET",
       credentials: "include",
-    })
+    });
   
     if (!response.ok) {
-      throw new Error("No se pudo obtener la foto")
+      throw new Error("No se pudo obtener la foto");
     }
   
-    return await response.blob()
-  }  
+    return await response.blob();
+  }
   
   // Limpieza manual
   async manualCleanup(): Promise<{ success: boolean; deletedCount: number; message: string }> {
