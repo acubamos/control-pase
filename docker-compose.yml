@@ -58,7 +58,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
-      - ./uploads:/app/uploads
+      - ./api/uploads:/app/uploads
     depends_on:
       control-db:
         condition: service_healthy
