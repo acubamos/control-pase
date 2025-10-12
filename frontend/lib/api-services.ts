@@ -1,6 +1,6 @@
 import { authService } from "./auth-service"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://control.acubamos.cu/api"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://apicp.acubamos.cu/api"
 
 export interface VehicleEntry {
   id: string
@@ -74,7 +74,7 @@ class ApiService {
     return await response.json()
   }
 
-  // Entradas de vehículos - Rutas basadas en entries.controller.ts
+  // Entradas de vehículos - Rutas basadas en entries.apicpler.ts
   async getEntries(): Promise<VehicleEntry[]> {
     return this.makeRequest<VehicleEntry[]>("/entries")
   }
@@ -140,7 +140,7 @@ class ApiService {
   }
 
   async getPhoto(photoUrL: string): Promise<Blob> {
-    const response = await fetch(`https://control.acubamos.cu${photoUrL}`, {
+    const response = await fetch(`https://apicp.acubamos.cu${photoUrL}`, {
       method: "GET",
       credentials: "include",
     })
