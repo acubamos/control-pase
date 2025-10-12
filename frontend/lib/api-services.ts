@@ -1,6 +1,6 @@
 import { authService } from "./auth-service"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://apicp.acubamos.cu/api"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://control.acubamos.cu/api"
 
 export interface VehicleEntry {
   id: string
@@ -139,30 +139,18 @@ class ApiService {
     return await response.json()
   }
 
-  // async getPhoto(photoUrL: string): Promise<Blob> {
-  //   const response = await fetch(`https://apicp.acubamos.cu${photoUrL}`, {
-  //     method: "GET",
-  //     credentials: "include",
-  //   })
-  
-  //   if (!response.ok) {
-  //     throw new Error("No se pudo obtener la foto")
-  //   }
-  
-  //   return await response.blob()
-  // }  
-  async getPhoto(entryId: string): Promise<Blob> {
-    const response = await fetch(`https://apicp.acubamos.cu/entries${entryId}/photo`, {
+  async getPhoto(photoUrL: string): Promise<Blob> {
+    const response = await fetch(`https://control.acubamos.cu${photoUrL}`, {
       method: "GET",
       credentials: "include",
-    });
+    })
   
     if (!response.ok) {
-      throw new Error("No se pudo obtener la foto");
+      throw new Error("No se pudo obtener la foto")
     }
   
-    return await response.blob();
-  }
+    return await response.blob()
+  }   
   
   // Limpieza manual
   async manualCleanup(): Promise<{ success: boolean; deletedCount: number; message: string }> {
