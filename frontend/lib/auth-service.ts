@@ -7,7 +7,6 @@ export interface User {
   role: string
   permissions: {
     canViewHistory: boolean
-    canDeleteEntries: boolean
     canManageUsers: boolean
     canExportData: boolean
     canManualCleanup: boolean
@@ -104,7 +103,7 @@ class AuthService {
       case "weekly_admin":
         return "Administrador Semanal"
       case "yearly_admin":
-        return "AZUMAT"
+        return "Demo"
       default:
         return "Usuario"
     }
@@ -118,25 +117,6 @@ class AuthService {
     } catch (error) {
       throw new Error("Error al crear usuarios por defecto")
     }
-  }
-
-  async manualCleanup(): Promise<{ success: boolean; deletedCount: number; message: string }> {
-    const token = this.getToken()
-    if (!token) throw new Error("No hay token de autenticación")
-
-    const response = await fetch(`${API_CONFIG.BASE_URL}/entries/cleanup`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.message || "Error en la limpieza")
-    }
-
-    return await response.json()
   }
 }
 

@@ -23,7 +23,6 @@ import {
 import { toast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
-  Search,
   Filter,
   Trash2,
   Calendar,
@@ -41,7 +40,6 @@ import {
 } from "lucide-react";
 import { UserMenu } from "@/components/user-menu";
 import { ExportMenu } from "@/components/export-menu";
-import { PhotoCapture } from "@/components/photo-capture";
 import { apiService, type VehicleEntry } from "@/lib/api-services";
 import { authService } from "@/lib/auth-service";
 
@@ -57,11 +55,9 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEntries, setSelectedEntries] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
-  const [showPhotoCapture, setShowPhotoCapture] = useState(false);
   const [selectedEntryForPhoto, setSelectedEntryForPhoto] = useState<
     string | null
   >(null);
-  const [editingEntry, setEditingEntry] = useState<VehicleEntry | null>(null);
 
   // Nuevos estados para manejar la visualización y descarga de fotos
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
@@ -72,7 +68,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
     dateFrom: "",
     dateTo: "",
     vehicleType: "all",
-    location: "",
+    location: "all",
     hasExitDate: "all",
   });
 
@@ -111,7 +107,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
         (entry) =>
           entry.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
           entry.apellidos.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          entry.ci.includes(searchTerm)         
+          entry.ci.includes(searchTerm)
       );
     }
 
@@ -137,13 +133,22 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
       );
     }
 
-    // Filtro de ubicación
-    if (filters.location) {
-      filtered = filtered.filter((entry) =>
-        Object.keys(entry.lugarDestino).some((lugar) =>
-          lugar.toLowerCase().includes(filters.location.toLowerCase())
-        )
-      );
+    // FILTRO DE UBICACIÓN - Para estructura { "Entidades": ["Área 1", "Área 2", ...] }
+    if (filters.location && filters.location !== "all") {
+      filtered = filtered.filter((entry) => {
+        const lugarDestino = entry.lugarDestino;
+
+        // Si es un objeto con la estructura { "Entidades": ["Área 1", "Área 2", ...] }
+        if (
+          lugarDestino &&
+          typeof lugarDestino === "object" &&
+          "Entidades" in lugarDestino
+        ) {
+          return lugarDestino.Entidades.includes(filters.location);
+        }
+
+        return false;
+      });
     }
 
     // Filtro de fecha de salida
@@ -164,33 +169,6 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
 
   const handleSelectAll = (checked: boolean) => {
     setSelectedEntries(checked ? filteredEntries.map((entry) => entry.id) : []);
-  };
-
-  const handleDeleteSelected = async () => {
-    if (selectedEntries.length === 0) return;
-
-    const confirmMessage = `¿Estás seguro de que quieres eliminar ${selectedEntries.length} entrada(s)?`;
-    if (!confirm(confirmMessage)) return;
-
-    try {
-      await apiService.deleteMultipleEntries(selectedEntries);
-      toast({
-        title: "Éxito",
-        description: `${selectedEntries.length} entrada(s) eliminada(s) correctamente`,
-      });
-      setSelectedEntries([]);
-      loadEntries();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Error al eliminar las entradas",
-        variant: "destructive",
-      });
-    }
-  };
-  const handlePhotoCapture = (entryId: string) => {
-    setSelectedEntryForPhoto(entryId);
-    setShowPhotoCapture(true);
   };
 
   const handlePhotoUploaded = () => {
@@ -251,12 +229,12 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
     try {
       const exitTime = getHavanaTime();
       await apiService.updateEntry(entryId, { fechaSalida: exitTime });
-      
+
       toast({
         title: "Éxito",
         description: "Salida registrada correctamente",
       });
-      
+
       loadEntries();
     } catch (error) {
       toast({
@@ -268,21 +246,21 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
   };
   function getHavanaTime(): string {
     const now = new Date();
-    
+
     // Obtener la hora de La Habana correctamente
     const havanaTimeStr = now.toLocaleString("en-US", {
-      timeZone: "America/Havana"
+      timeZone: "America/Havana",
     });
-    
+
     const havanaTime = new Date(havanaTimeStr);
-    
+
     // Formatear manualmente para mantener la zona horaria
     const year = havanaTime.getFullYear();
-    const month = String(havanaTime.getMonth() + 1).padStart(2, '0');
-    const day = String(havanaTime.getDate()).padStart(2, '0');
-    const hours = String(havanaTime.getHours()).padStart(2, '0');
-    const minutes = String(havanaTime.getMinutes()).padStart(2, '0');
-    
+    const month = String(havanaTime.getMonth() + 1).padStart(2, "0");
+    const day = String(havanaTime.getDate()).padStart(2, "0");
+    const hours = String(havanaTime.getHours()).padStart(2, "0");
+    const minutes = String(havanaTime.getMinutes()).padStart(2, "0");
+
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   }
 
@@ -316,7 +294,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
           </div>
         </div>
       </header>
-  
+
       {/* Contenido principal - se expande para empujar el footer hacia abajo */}
       <div className="flex-1">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -339,7 +317,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                 </div>
               </CardContent>
             </Card>
-  
+
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center">
@@ -357,7 +335,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                 </div>
               </CardContent>
             </Card>
-  
+
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center">
@@ -375,7 +353,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                 </div>
               </CardContent>
             </Card>
-  
+
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center">
@@ -392,12 +370,12 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
               </CardContent>
             </Card>
           </div>
-  
+
           {/* Controles */}
           <Card className="mb-6">
             <CardContent className="p-6">
               <div className="flex flex-col lg:flex-row gap-4">
-                {/* Búsqueda */}             
+                {/* Búsqueda */}
                 {/* Botones de acción */}
                 <div className="flex gap-2">
                   <Button
@@ -408,16 +386,10 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                     <Filter className="h-4 w-4 mr-2" />
                     Filtros
                   </Button>
-                  {/* {selectedEntries.length > 0 && (
-                    <Button onClick={handleDeleteSelected} variant="destructive" size="sm">
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Eliminar ({selectedEntries.length})
-                    </Button>
-                  )} */} 
                   <ExportMenu entries={filteredEntries} />
                 </div>
               </div>
-  
+
               {/* Panel de Filtros */}
               {showFilters && (
                 <div className="mt-6 pt-6 border-t">
@@ -437,7 +409,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                         }
                       />
                     </div>
-  
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Fecha Hasta
@@ -453,7 +425,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                         }
                       />
                     </div>
-  
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Tipo de Vehículo
@@ -461,7 +433,10 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                       <Select
                         value={filters.vehicleType}
                         onValueChange={(value) =>
-                          setFilters((prev) => ({ ...prev, vehicleType: value }))
+                          setFilters((prev) => ({
+                            ...prev,
+                            vehicleType: value,
+                          }))
                         }
                       >
                         <SelectTrigger>
@@ -478,23 +453,34 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                         </SelectContent>
                       </Select>
                     </div>
-  
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Ubicación
                       </label>
-                      <Input
-                        placeholder="Filtrar por ubicación"
+                      <Select
                         value={filters.location}
-                        onChange={(e) =>
-                          setFilters((prev) => ({
-                            ...prev,
-                            location: e.target.value,
-                          }))
+                        onValueChange={(value) =>
+                          setFilters((prev) => ({ ...prev, location: value }))
                         }
-                      />
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Todas las ubicaciones" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">
+                            Todas las ubicaciones
+                          </SelectItem>
+                          <SelectItem value="Área 1">Área 1</SelectItem>
+                          <SelectItem value="Área 2">Área 2</SelectItem>
+                          <SelectItem value="Área 3">Área 3</SelectItem>
+                          <SelectItem value="Área 4">Área 4</SelectItem>
+                          <SelectItem value="Área 5">Área 5</SelectItem>
+                          <SelectItem value="Área 6">Área 6</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-  
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Estado de Salida
@@ -502,7 +488,10 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                       <Select
                         value={filters.hasExitDate}
                         onValueChange={(value) =>
-                          setFilters((prev) => ({ ...prev, hasExitDate: value }))
+                          setFilters((prev) => ({
+                            ...prev,
+                            hasExitDate: value,
+                          }))
                         }
                       >
                         <SelectTrigger>
@@ -516,7 +505,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                       </Select>
                     </div>
                   </div>
-  
+
                   <div className="mt-4 flex gap-2">
                     <Button
                       onClick={() =>
@@ -524,7 +513,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                           dateFrom: "",
                           dateTo: "",
                           vehicleType: "all",
-                          location: "",
+                          location: "all",
                           hasExitDate: "all",
                         })
                       }
@@ -538,7 +527,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
               )}
             </CardContent>
           </Card>
-  
+
           {/* Lista de Entradas */}
           <Card>
             <CardHeader>
@@ -552,7 +541,9 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                     }
                     onCheckedChange={handleSelectAll}
                   />
-                  <span className="text-sm text-gray-600">Seleccionar todo</span>
+                  <span className="text-sm text-gray-600">
+                    Seleccionar todo
+                  </span>
                 </div>
               </div>
             </CardHeader>
@@ -587,9 +578,9 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                               <span>CI: {entry.ci}</span>
                             </div>
                           </div>
-                        </div>                      
+                        </div>
                       </div>
-  
+
                       <div className="flex items-center gap-2">
                         <Car className="h-4 w-4 text-gray-500" />
                         <div className="flex gap-1">
@@ -602,59 +593,64 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                               {tipo}
                             </Badge>
                           ))}
-                        </div>                     
+                        </div>
                       </div>
-  
+
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-gray-500" />
                         <div className="flex flex-wrap gap-1">
-                          {Object.entries(entry.lugarDestino).map(
-                            ([lugar, sublugares]) =>
-                              sublugares.map((sublugar) => (
+                          {entry.lugarDestino &&
+                            entry.lugarDestino.Entidades &&
+                            entry.lugarDestino.Entidades.map(
+                              (ubicacion, index) => (
                                 <Badge
-                                  key={`${lugar}-${sublugar}`}
+                                  key={index}
                                   variant="outline"
                                   className="text-xs"
                                 >
-                                  {lugar} - {sublugar}
+                                  {ubicacion}
                                 </Badge>
-                              ))
-                          )}
+                              )
+                            )}
                         </div>
                       </div>
-  
+
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <Calendar className="h-4 w-4" />
-                        <span>Entrada: {formatDateTime(entry.fechaEntrada)}</span>
+                        <span>
+                          Entrada: {formatDateTime(entry.fechaEntrada)}
+                        </span>
                         {entry.fechaSalida && (
                           <span>
                             • Salida: {formatDateTime(entry.fechaSalida)}
                           </span>
                         )}
                       </div>
-  
+
                       {/* Botón para registrar salida */}
                       {!entry.fechaSalida && (
-                          <div className="pt-2">
-                            <Button
-                              onClick={() => handleRegisterExit(entry.id)}
-                              variant="outline"
-                              size="sm"
-                              className="w-full"
-                            >
-                              <LogOut className="h-4 w-4 mr-2" />
-                              Registrar Salida
-                            </Button>
-                          </div>
-                        )}
-  
+                        <div className="pt-2">
+                          <Button
+                            onClick={() => handleRegisterExit(entry.id)}
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                          >
+                            <LogOut className="h-4 w-4 mr-2" />
+                            Registrar Salida
+                          </Button>
+                        </div>
+                      )}
+
                       {entry.photoUrl && (
-                        <div className="mt-2 flex items-center gap-2">                       
+                        <div className="mt-2 flex items-center gap-2">
                           <div className="flex gap-1">
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleViewPhoto(entry.photoUrl ?? "")}
+                              onClick={() =>
+                                handleViewPhoto(entry.photoUrl ?? "")
+                              }
                               title="Ver foto"
                             >
                               <Eye className="h-4 w-4" />
@@ -670,7 +666,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
           </Card>
         </div>
       </div>
-  
+
       {/* Modal de ver foto en grande */}
       <Dialog
         open={!!selectedPhoto}
@@ -704,7 +700,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-  
+
       {/* Footer - siempre al fondo */}
       <footer className="bg-blue-800 text-white py-4 mt-auto">
         <div className="container mx-auto px-4 text-center">

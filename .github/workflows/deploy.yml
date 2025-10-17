@@ -113,7 +113,7 @@ jobs:
         port:     ${{ secrets.SSH_PORT }}
         key:      ${{ secrets.SSH_PRIVATE_KEY }}
         source:   "./"
-        target:   "/mnt/Data/control-pase-azumat"
+        target:   "/mnt/Data/control-pase-Demo"
         strip_components: 1
 
     - name: 🚀 Ejecutar despliegue en VPS
@@ -126,7 +126,7 @@ jobs:
         port:     ${{ secrets.SSH_PORT }}
         script: |
           set -euo pipefail
-          PROJECT_DIR="/mnt/Data/control-pase-azumat"
+          PROJECT_DIR="/mnt/Data/control-pase-Demo"
           BACKUP_ROOT="/mnt/Data/control-pase-backups"
 
           echo "🔍 Verificando directorio..."

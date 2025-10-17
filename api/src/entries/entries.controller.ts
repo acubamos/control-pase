@@ -5,7 +5,6 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
   UseGuards,
   Query,
   UseInterceptors,
@@ -17,7 +16,6 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { EntriesService } from './entries.service';
 import { CreateEntryDto } from './dto/create-entry.dto';
 import { UpdateEntryDto } from './dto/update-entry.dto';
-import { DeleteMultipleDto } from './dto/delete-multiple.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -124,26 +122,5 @@ export class EntriesController {
     );
 
     return res.sendFile(filePath);
-  }
-
-  @Delete(':id')
-  @Roles(UserRole.WEEKLY_ADMIN, UserRole.YEARLY_ADMIN)
-  remove(@Param('id') id: string) {
-    return this.entriesService.remove(id);
-  }
-
-  @Delete()
-  @Roles(UserRole.WEEKLY_ADMIN, UserRole.YEARLY_ADMIN)
-  deleteMultiple(
-    @Body() deleteMultipleDto: DeleteMultipleDto,
-    @GetUser() user: User,
-  ) {
-    return this.entriesService.deleteMultiple(deleteMultipleDto, user);
-  }
-
-  @Post('cleanup')
-  @Roles(UserRole.YEARLY_ADMIN)
-  manualCleanup(@GetUser() user: User) {
-    return this.entriesService.manualCleanup(user);
   }
 }

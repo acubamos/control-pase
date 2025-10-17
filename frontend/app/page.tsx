@@ -52,12 +52,12 @@ const VEHICLE_TYPES = ["Carro", "Moto", "Camión", "Camioneta", "Bus", "N/A"];
 
 const LOCATIONS = {
   Entidades: [
-    "Acubamos SURL",
-    "Supergigantes",
-    "Agencia de Paquetería",
-    "Etecsa",
-    "Azumat OC",
-    "Azumat UEB SG",
+    "Área 1",
+    "Área 2",
+    "Área 3",
+    "Área 4",
+    "Área 5",
+    "Área 6",
   ],
 };
 
@@ -125,7 +125,6 @@ export default function VehicleEntrySystem() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentView, setCurrentView] = useState<"main" | "history">("main");
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [entryToDelete, setEntryToDelete] = useState<string | null>(null);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState<string>(
@@ -299,9 +298,9 @@ export default function VehicleEntrySystem() {
           newDestino[location] = newDestino[location].filter(
             (s) => s !== sublocation
           );
-          if (newDestino[location].length === 0) {
-            delete newDestino[location];
-          }
+          // if (newDestino[location].length === 0) {
+          //   delete newDestino[location];
+          // }
         }
       }
 
@@ -417,39 +416,6 @@ export default function VehicleEntrySystem() {
     });
     setEditingEntry(entry);
   };
-
-  const handleDeleteClick = (id: string) => {
-    setEntryToDelete(id);
-    setShowConfirmModal(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!entryToDelete) return;
-
-    try {
-      await apiService.deleteEntry(entryToDelete);
-      setEntries((prevEntries) =>
-        prevEntries.filter((entry) => entry.id !== entryToDelete)
-      );
-      loadEntries();
-      setShowConfirmModal(false);
-      setEntryToDelete(null);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Error al eliminar la entrada",
-        variant: "destructive",
-      });
-      setShowConfirmModal(false);
-      setEntryToDelete(null);
-    }
-  };
-
-  const handleCancelDelete = () => {
-    setShowConfirmModal(false);
-    setEntryToDelete(null);
-  };
-
   const handlePhotoCapture = (entryId: string) => {
     setSelectedEntryForPhoto(entryId);
     setShowPhotoCapture(true);
@@ -883,36 +849,6 @@ export default function VehicleEntrySystem() {
           </Card>
         </div>
       </div>
-
-      {/* Modal de Confirmación de Eliminación */}
-      <Dialog open={showConfirmModal} onOpenChange={setShowConfirmModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Confirmar eliminación</DialogTitle>
-            <DialogDescription>
-              ¿Estás seguro de que quieres eliminar esta entrada? Esta acción no
-              se puede deshacer.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="sm:justify-start gap-2">
-            <Button
-              onClick={handleConfirmDelete}
-              variant="destructive"
-              className="flex-1"
-            >
-              Eliminar
-            </Button>
-            <Button
-              onClick={handleCancelDelete}
-              variant="outline"
-              className="flex-1"
-            >
-              Cancelar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Modal de ver foto en grande */}
       <Dialog
         open={!!selectedPhoto}

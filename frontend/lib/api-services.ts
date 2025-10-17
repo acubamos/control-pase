@@ -104,20 +104,6 @@ class ApiService {
       body: JSON.stringify(entryData),
     })
   }
-
-  async deleteEntry(id: string): Promise<void> {
-    return this.makeRequest<void>(`/entries/${id}`, {
-      method: "DELETE",
-    }, false) // Agrega un parámetro para indicar que no espera JSON
-  }
-
-  async deleteMultipleEntries(ids: string[]): Promise<{ deletedCount: number; message: string }> {
-    return this.makeRequest<{ deletedCount: number; message: string }>("/entries", {
-      method: "DELETE",
-      body: JSON.stringify({ ids }),
-    })
-  }
-
   async uploadPhoto(entryId: string, file: File): Promise<VehicleEntry> {
     const token = authService.getToken()
     const formData = new FormData()
@@ -151,13 +137,6 @@ class ApiService {
   
     return await response.blob()
   }   
-  
-  // Limpieza manual
-  async manualCleanup(): Promise<{ success: boolean; deletedCount: number; message: string }> {
-    return this.makeRequest<{ success: boolean; deletedCount: number; message: string }>("/entries/cleanup", {
-      method: "POST",
-    })
-  }
 }
 
 export const apiService = new ApiService()

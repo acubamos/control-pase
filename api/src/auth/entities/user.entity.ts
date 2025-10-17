@@ -41,22 +41,22 @@ export class User {
       canCreateEntries: true,
       canEditEntries: true,
       canViewEntries: true,
-      canDeleteEntries: true,
+      //canDeleteEntries: true,
     };
     const otherPermisions = {
-      canDeleteEntries: true,
+      //canDeleteEntries: true,
       canViewHistory: true,
       canViewStatistics: true,
       //canDeleteEntries: false,
       //canViewHistory: false,
-      canManualCleanup: false,
+      //canManualCleanup: false,
       //canViewStatistics: false,
     };
 
     switch (this.role) {
       case UserRole.DAILY_ADMIN:  return { ...basePermissions }
       case UserRole.WEEKLY_ADMIN: return { ...basePermissions, ...otherPermisions }
-      case UserRole.YEARLY_ADMIN: return { ...basePermissions, ...otherPermisions, canManualCleanup: true }
+      case UserRole.YEARLY_ADMIN: return { ...basePermissions, ...otherPermisions }
 
       default:
         return basePermissions

@@ -67,47 +67,6 @@ export function useVehicleEntries() {
       return null
     }
   }
-
-  const deleteEntry = async (id: string): Promise<boolean> => {
-    try {
-      await apiService.deleteEntry(id)
-      setEntries((prev) => prev.filter((e) => e.id !== id))
-      toast({
-        title: "Éxito",
-        description: "Entrada eliminada correctamente",
-      })
-      return true
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Error al eliminar la entrada"
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      })
-      return false
-    }
-  }
-
-  const deleteMultipleEntries = async (ids: string[]): Promise<boolean> => {
-    try {
-      await apiService.deleteMultipleEntries(ids)
-      setEntries((prev) => prev.filter((e) => !ids.includes(e.id)))
-      toast({
-        title: "Éxito",
-        description: `${ids.length} entrada(s) eliminada(s) correctamente`,
-      })
-      return true
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Error al eliminar las entradas"
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      })
-      return false
-    }
-  }
-
   const uploadPhoto = async (entryId: string, file: File): Promise<boolean> => {
     try {
       const updatedEntry = await apiService.uploadPhoto(entryId, file)
@@ -139,8 +98,6 @@ export function useVehicleEntries() {
     loadEntries,
     createEntry,
     updateEntry,
-    deleteEntry,
-    deleteMultipleEntries,
     uploadPhoto,
   }
 }
