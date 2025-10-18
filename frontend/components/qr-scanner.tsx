@@ -91,7 +91,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
           scanFrame();
         }, { once: true });
       } else {
-        setTimeout(scanFrame, 1000);
+        setTimeout(scanFrame, 800);
       }
       
     } catch (err) {
