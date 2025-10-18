@@ -22,6 +22,7 @@ export function useVehicleEntries() {
         title: "Error",
         description: errorMessage,
         variant: "destructive",
+        
       })
     } finally {
       setIsLoading(false)
@@ -35,6 +36,7 @@ export function useVehicleEntries() {
       toast({
         title: "Éxito",
         description: "Entrada creada correctamente",
+        
       })
       return newEntry
     } catch (err) {
@@ -43,6 +45,7 @@ export function useVehicleEntries() {
         title: "Error",
         description: errorMessage,
         variant: "destructive",
+        
       })
       return null
     }
@@ -55,6 +58,7 @@ export function useVehicleEntries() {
       toast({
         title: "Éxito",
         description: "Entrada actualizada correctamente",
+        
       })
       return updatedEntry
     } catch (err) {
@@ -63,6 +67,7 @@ export function useVehicleEntries() {
         title: "Error",
         description: errorMessage,
         variant: "destructive",
+        
       })
       return null
     }
@@ -74,6 +79,7 @@ export function useVehicleEntries() {
       toast({
         title: "Éxito",
         description: "Foto subida correctamente",
+        
       })
       return true
     } catch (err) {
@@ -82,6 +88,7 @@ export function useVehicleEntries() {
         title: "Error",
         description: errorMessage,
         variant: "destructive",
+        
       })
       return false
     }

@@ -17,6 +17,7 @@ export function ExportMenu({ entries }: ExportMenuProps) {
         title: "Sin datos",
         description: "No hay entradas para exportar",
         variant: "destructive",
+        
       })
       return
     }
@@ -65,6 +66,7 @@ export function ExportMenu({ entries }: ExportMenuProps) {
     toast({
       title: "Exportación exitosa",
       description: `${entries.length} entradas exportadas a CSV`,
+      
     })
   }
 
@@ -74,6 +76,7 @@ export function ExportMenu({ entries }: ExportMenuProps) {
         title: "Sin datos",
         description: "No hay entradas para exportar",
         variant: "destructive",
+        
       })
       return
     }
@@ -163,6 +166,7 @@ export function ExportMenu({ entries }: ExportMenuProps) {
     toast({
       title: "Exportación exitosa",
       description: `${entries.length} entradas exportadas a Excel`,
+      
     })
   }
 
@@ -172,6 +176,7 @@ export function ExportMenu({ entries }: ExportMenuProps) {
         title: "Sin datos",
         description: "No hay entradas para exportar",
         variant: "destructive",
+        
       })
       return
     }
@@ -204,6 +209,7 @@ Fecha Creación: ${entry.createdAt}
     toast({
       title: "Exportación exitosa",
       description: `${entries.length} entradas exportadas a TXT`,
+      
     })
   }
 
@@ -213,6 +219,7 @@ Fecha Creación: ${entry.createdAt}
         title: "Sin datos",
         description: "No hay entradas para exportar",
         variant: "destructive",
+        
       })
       return
     }
@@ -351,6 +358,7 @@ Fecha Creación: ${entry.createdAt}
     toast({
       title: "Exportación exitosa",
       description: `${entries.length} entradas exportadas a Word`,
+      
     })
   }
 

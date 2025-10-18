@@ -92,6 +92,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
         title: "Error",
         description: "No se pudieron cargar las entradas",
         variant: "destructive",
+        
       });
     } finally {
       setIsLoading(false);
@@ -193,6 +194,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
         title: "Error",
         description: "No se pudo cargar la foto",
         variant: "destructive",
+        
       });
     }
   };
@@ -238,6 +240,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
       toast({
         title: "Éxito",
         description: "Salida registrada correctamente",
+        
       });
 
       loadEntries();
@@ -246,6 +249,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
         title: "Error",
         description: "No se pudo registrar la salida",
         variant: "destructive",
+        
       });
     }
   };

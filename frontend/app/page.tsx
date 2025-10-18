@@ -228,6 +228,7 @@ export default function VehicleEntrySystem() {
         title: "Error",
         description: "No se pudieron cargar las entradas",
         variant: "destructive",
+        
       });
     }
   };
@@ -259,6 +260,7 @@ export default function VehicleEntrySystem() {
     toast({
       title: "QR Escaneado",
       description: "Datos cargados desde el código QR",
+      
     });
   };
 
@@ -323,6 +325,7 @@ export default function VehicleEntrySystem() {
       toast({
         title: "Éxito",
         description: "Salida registrada correctamente",
+        
       });
 
       loadEntries();
@@ -331,6 +334,7 @@ export default function VehicleEntrySystem() {
         title: "Error",
         description: "No se pudo registrar la salida",
         variant: "destructive",
+        
       });
     }
   };
@@ -345,6 +349,7 @@ export default function VehicleEntrySystem() {
           title: "Validación",
           description: "Debe seleccionar al menos un tipo de vehículo.",
           variant: "destructive",
+          
         });
         setIsSubmitting(false);
         return;
@@ -358,6 +363,7 @@ export default function VehicleEntrySystem() {
           title: "Validación",
           description: "Debe seleccionar al menos un lugar de destino.",
           variant: "destructive",
+          
         });
         setIsSubmitting(false);
         return;
@@ -368,6 +374,7 @@ export default function VehicleEntrySystem() {
         toast({
           title: "Éxito",
           description: "Entrada actualizada correctamente",
+          
         });
       } else {
         const entryData = {
@@ -378,6 +385,7 @@ export default function VehicleEntrySystem() {
         toast({
           title: "Éxito",
           description: "Entrada registrada correctamente",
+          
         });
       }
 
@@ -391,6 +399,7 @@ export default function VehicleEntrySystem() {
             ? error.message
             : "Error al procesar la entrada",
         variant: "destructive",
+        
       });
     } finally {
       setIsSubmitting(false);
@@ -425,6 +434,7 @@ export default function VehicleEntrySystem() {
       title: "Error de cámara",
       description: error,
       variant: "destructive",
+      
     });
   };
 
@@ -449,6 +459,7 @@ export default function VehicleEntrySystem() {
         title: "Error",
         description: "No se pudo cargar la foto",
         variant: "destructive",
+        
       });
     }
   };

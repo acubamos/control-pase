@@ -145,6 +145,7 @@ export function PhotoCapture({
         title: "Error",
         description: "Por favor selecciona un archivo de imagen válido",
         variant: "destructive",
+        
       });
       return false;
     }
@@ -156,6 +157,7 @@ export function PhotoCapture({
         title: "Error",
         description: "La imagen es demasiado grande. Máximo permitido: 10MB",
         variant: "destructive",
+        
       });
       return false;
     }
@@ -173,6 +175,7 @@ export function PhotoCapture({
       toast({
         title: "Éxito",
         description: "Foto subida correctamente",
+        
       });
       handleClose();
     } catch (error) {
@@ -181,6 +184,7 @@ export function PhotoCapture({
         description:
           error instanceof Error ? error.message : "Error al subir la foto",
         variant: "destructive",
+        
       });
     } finally {
       setIsUploading(false);
@@ -217,6 +221,7 @@ export function PhotoCapture({
           title: "Error",
           description: "No se pudo procesar la foto",
           variant: "destructive",
+          
         });
       });
   };

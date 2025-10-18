@@ -6,7 +6,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
@@ -21,7 +20,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { authService } from "@/lib/auth-service"
-import { toast } from "@/hooks/use-toast"
 import { User, LogOut, Trash2, Shield, Clock, Calendar, Users } from "lucide-react"
 
 interface UserMenuProps {
@@ -30,19 +28,19 @@ interface UserMenuProps {
 
 export function UserMenu({ onLogout }: UserMenuProps) {
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
-  const [showCleanupDialog, setShowCleanupDialog] = useState(false)
 
   const user = authService.getCurrentUser()
   const roleDescription = authService.getRoleDescription()
 
   const handleLogout = () => {
     authService.logout()
-    onLogout()
-    toast({
-      title: "Sesión cerrada",
-      description: "Has cerrado sesión exitosamente",
-    })
+    onLogout()   
   }
+
+  const handleLogoutClick = () => {
+    setShowLogoutDialog(true)
+  }
+
   const getRoleIcon = () => {
     if (!user) return <User className="h-4 w-4" />
 
@@ -87,18 +85,8 @@ export function UserMenu({ onLogout }: UserMenuProps) {
           <DropdownMenuSeparator />
           <DropdownMenuItem>           
             <span>Bienvenido {roleDescription}</span>
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          {user.permissions.canManageUsers && (
-            <DropdownMenuItem
-              onClick={() => setShowCleanupDialog(true)}
-              className="text-orange-600 focus:text-orange-600"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Limpiar Base de Datos
-            </DropdownMenuItem>
-          )}
-          <DropdownMenuItem onClick={handleLogout}>
+          </DropdownMenuItem>         
+          <DropdownMenuItem onClick={handleLogoutClick}>
             <LogOut className="mr-2 h-4 w-4" />
             <span>Cerrar Sesión</span>
           </DropdownMenuItem>
