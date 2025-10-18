@@ -48,60 +48,55 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       setError(null);
       setIsScanning(true);
       setScanningStatus("Iniciando cámara...");
-
-      // 1️⃣ - Abrimos la cámara sin forzar resolución
-      const stream = await navigator.mediaDevices.getUserMedia({
+  
+      // Intentar diferentes configuraciones de cámara
+      const constraints = {
         video: {
           facingMode: { ideal: "environment" },
-          // width: { ideal: 640 },
-          // height: { ideal: 480 },               
-        },
-      });
-
-      streamRef.current = stream;
-
-      const videoTrack = stream.getVideoTracks()[0];
-      const capabilities = videoTrack.getCapabilities();
-      console.log("📷 Capacidades detectadas:", capabilities);
-
-      // 2️⃣ - Aplicamos enfoque continuo si está soportado
-      if (
-        capabilities.focusMode &&
-        capabilities.focusMode.includes("continuous")
-      ) {
-        try {
-          await videoTrack.applyConstraints({
-            advanced: [{ focusMode: "continuous" }],
-          });
-          console.log("✅ Enfoque continuo activado");
-        } catch (err) {
-          console.warn("⚠️ No se pudo aplicar enfoque continuo", err);
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          frameRate: { ideal: 30 }
         }
+      };
+  
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+  
+      // Manejar capacidades opcionales de forma más segura
+      const videoTrack = stream.getVideoTracks()[0];
+      
+      try {
+        const capabilities = videoTrack.getCapabilities?.() || {};
+        
+        // Aplicar focusMode solo si está disponible y soportado
+        if (capabilities.focusMode && capabilities.focusMode.includes("continuous")) {
+          await videoTrack.applyConstraints({
+            advanced: [{ focusMode: "continuous" }]
+          });
+        }
+      } catch (capabilityError) {
+        console.warn("Capacidades avanzadas no disponibles:", capabilityError);
       }
-
-      // 3️⃣ - Aplicamos un zoom suave si está disponible
-      // if (capabilities.zoom) {
-      //   await videoTrack.applyConstraints({
-      //     advanced: [{ zoom: capabilities.zoom.min }], // 👈 mínimo posible
-      //   });
-      // }
-
-      // 4️⃣ - Iniciamos el video
+  
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
-
+  
       setScanningStatus("📡 Escaneando...");
-      setTimeout(() => {
-        scanFrame();
-      }, 800);
+      
+      // Esperar a que el video esté realmente listo
+      if (videoRef.current) {
+        videoRef.current.addEventListener('loadeddata', () => {
+          scanFrame();
+        }, { once: true });
+      } else {
+        setTimeout(scanFrame, 1000);
+      }
+      
     } catch (err) {
       console.error("❌ Error iniciando cámara:", err);
-      setError(
-        "No se pudo acceder a la cámara. Asegúrate de permitir los permisos."
-      );
-      setIsScanning(false);
+      handleCameraError(err);
     }
   };
 
