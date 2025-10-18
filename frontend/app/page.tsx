@@ -51,14 +51,7 @@ import Image from "next/image";
 const VEHICLE_TYPES = ["Carro", "Moto", "Camión", "Camioneta", "Bus", "N/A"];
 
 const LOCATIONS = {
-  Entidades: [
-    "Área 1",
-    "Área 2",
-    "Área 3",
-    "Área 4",
-    "Área 5",
-    "Área 6",
-  ],
+  Entidades: ["Área 1", "Área 2", "Área 3", "Área 4", "Área 5", "Área 6"],
 };
 
 // 1. Función para obtener hora de La Habana en formato ISO (corregida)
@@ -439,12 +432,33 @@ export default function VehicleEntrySystem() {
     return formatDateTimeTo12h(dateString);
   };
 
+  // const handleViewPhoto = async (entryId: string) => {
+  //   try {
+  //     const blob = await apiService.getPhoto(entryId);
+  //     const url = URL.createObjectURL(blob);
+  //     setPhotoBlobUrl(url);
+  //     setSelectedPhoto(url);
+  //   } catch (error) {
+  //     toast({
+  //       title: "Error",
+  //       description: "No se pudo cargar la foto",
+  //       variant: "destructive",
+  //     });
+  //   }
+  // };
+
   const handleViewPhoto = async (entryId: string) => {
     try {
       const blob = await apiService.getPhoto(entryId);
-      const url = URL.createObjectURL(blob);
-      setPhotoBlobUrl(url);
-      setSelectedPhoto(url);
+
+      // Convertir blob a data URL
+      const reader = new FileReader();
+      reader.onload = function () {
+        const dataUrl = reader.result as string;
+        setPhotoBlobUrl(dataUrl);
+        setSelectedPhoto(dataUrl);
+      };
+      reader.readAsDataURL(blob);
     } catch (error) {
       toast({
         title: "Error",
