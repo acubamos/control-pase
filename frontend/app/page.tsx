@@ -786,18 +786,19 @@ export default function VehicleEntrySystem() {
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-gray-500" />
                         <div className="flex flex-wrap gap-1">
-                          {Object.entries(entry.lugarDestino).map(
-                            ([lugar, sublugares]) =>
-                              sublugares.map((sublugar) => (
+                          {entry.lugarDestino &&
+                            entry.lugarDestino.Entidades &&
+                            entry.lugarDestino.Entidades.map(
+                              (ubicacion, index) => (
                                 <Badge
-                                  key={`${lugar}-${sublugar}`}
+                                  key={index}
                                   variant="outline"
                                   className="text-xs"
                                 >
-                                  {lugar} - {sublugar}
+                                  {ubicacion}
                                 </Badge>
-                              ))
-                          )}
+                              )
+                            )}
                         </div>
                       </div>
 
