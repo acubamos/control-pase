@@ -71,7 +71,7 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       ) {
         try {
           await videoTrack.applyConstraints({
-            advanced: [{ focusMode: "continuous" } as any],
+            advanced: [{ focusMode: "continuous" }],
           });
           console.log("✅ Enfoque continuo activado");
         } catch (err) {
