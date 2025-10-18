@@ -96,7 +96,6 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       
     } catch (err) {
       console.error("❌ Error iniciando cámara:", err);
-      handleCameraError(err);
     }
   };
 
