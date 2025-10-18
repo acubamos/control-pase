@@ -1,6 +1,6 @@
 name: siscop
 services:
-  db:
+  siscop-db:
     image: postgres:17-alpine
 #    container_name: siscop-db
     restart: unless-stopped
@@ -54,7 +54,7 @@ services:
       - /etc/timezone:/etc/timezone:ro
       - ./api/uploads:/app/uploads
     depends_on:
-      db:
+      siscop-db:
         condition: service_healthy
     networks:
       - internal
