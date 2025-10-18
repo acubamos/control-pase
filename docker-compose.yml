@@ -34,6 +34,7 @@ services:
     restart: always
     mem_limit: 512m      # Limita la RAM a 512 MB
     cpus: 0.5            # Limita el uso de CPU a medio núcleo
+    user: "1001:1001"
     environment:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
