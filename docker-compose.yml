@@ -1,9 +1,11 @@
-
+name: siscop
 services:
-  control-db:
+  db:
     image: postgres:17-alpine
-    container_name: control-db
+#    container_name: siscop-db
     restart: unless-stopped
+    mem_limit: 512m      # Limita la RAM a 512 MB
+    cpus: 0.5            # Limita el uso de CPU a medio núcleo
     expose:
        - "5432"
     ports:
@@ -13,14 +15,6 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
       TZ: America/Havana
-    deploy:
-        resources:
-            limits:
-              cpus: "0.50"
-              memory: "256M"
-            reservations:
-              cpus: "0.25"
-              memory: "64M"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
       interval: 5s
@@ -31,12 +25,12 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
     networks:
-      - control-network   
+      - internal 
 
   api:
     build:
       context: ./api
-    container_name: control-api
+#    container_name: siscop-api
     restart: always
     mem_limit: 512m      # Limita la RAM a 512 MB
     cpus: 0.5            # Limita el uso de CPU a medio núcleo
@@ -60,10 +54,10 @@ services:
       - /etc/timezone:/etc/timezone:ro
       - ./api/uploads:/app/uploads
     depends_on:
-      control-db:
+      db:
         condition: service_healthy
     networks:
-      - control-network
+      - internal
       - proxy
     labels:
       - "traefik.enable=true"
@@ -76,7 +70,7 @@ services:
   frontend:
     build:
       context: ./frontend
-    container_name: control-frontend
+#    container_name: siscop-frontend
     restart: always
     environment:
       - TZ=America/Havana
@@ -84,26 +78,20 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
-    deploy:
-        resources:
-            limits:
-              cpus: "0.50"
-              memory: "256M"
-            reservations:
-              cpus: "0.25"
-              memory: "64M"
+    mem_limit: 512m      # Limita la RAM a 512 MB
+    cpus: 0.5            # Limita el uso de CPU a medio núcleo
     networks:
-      - control-network
+      - internal
       - proxy
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.control.rule=Host(`control.acubamos.cu`)"
+      - "traefik.http.routers.control.rule=Host(`siscop.acubamos.cu`)"
       - "traefik.http.routers.control.entrypoints=websecure"
       - "traefik.http.routers.control.tls.certresolver=letsencrypt"
       - "traefik.http.services.control.loadbalancer.server.port=3000"
       - "traefik.docker.network=proxy"
 
 networks:
-  control-network:
+  internal:
   proxy:
     external: true

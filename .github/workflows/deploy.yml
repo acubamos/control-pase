@@ -73,7 +73,7 @@ jobs:
       run: npm run build  # Esto ejecuta "nest build"
 
     - name: 🧪 Ejecutar tests unitarios
-      run: npm test -- --passWithNoTests # Ejecuta "jest"
+      run: npm test  # Ejecuta "jest"
 
     - name: 📊 Tests de cobertura
       run: npm run test:cov -- --passWithNoTests  # Ejecuta "jest --coverage"
@@ -113,7 +113,7 @@ jobs:
         port:     ${{ secrets.SSH_PORT }}
         key:      ${{ secrets.SSH_PRIVATE_KEY }}
         source:   "./"
-        target:   "/mnt/Data/control-pase-azumat"
+        target:   "/mnt/Data/siscop"
         strip_components: 1
 
     - name: 🚀 Ejecutar despliegue en VPS
@@ -126,8 +126,8 @@ jobs:
         port:     ${{ secrets.SSH_PORT }}
         script: |
           set -euo pipefail
-          PROJECT_DIR="/mnt/Data/control-pase-azumat"
-          BACKUP_ROOT="/mnt/Data/control-pase-backups"
+          PROJECT_DIR="/mnt/Data/siscop"
+          BACKUP_ROOT="/mnt/Data/siscop-backup"
 
           echo "🔍 Verificando directorio..."
           ls -la "$PROJECT_DIR" || echo "⚠️ Directorio no accesible"
