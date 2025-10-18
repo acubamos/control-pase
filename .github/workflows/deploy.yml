@@ -68,7 +68,7 @@ jobs:
     # - name: 📥 Instalar dependencias (actualizar lock file)
     #   run: npm install
     - name: 📥 Instalar dependencias (ci)
-      run: npm ci  # o npm install si tienes package-lock.json
+      run: npm install  # o npm install si tienes package-lock.json
 
     - name: 🏗️ Build de la aplicación
       run: npm run build  # Esto ejecuta "nest build"
