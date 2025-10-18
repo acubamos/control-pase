@@ -176,13 +176,18 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
     setSelectedEntryForPhoto(null);
   };
 
-  // Función para ver la foto en modal
   const handleViewPhoto = async (entryId: string) => {
     try {
       const blob = await apiService.getPhoto(entryId);
-      const url = URL.createObjectURL(blob);
-      setPhotoBlobUrl(url);
-      setSelectedPhoto(url);
+
+      // Convertir blob a data URL
+      const reader = new FileReader();
+      reader.onload = function () {
+        const dataUrl = reader.result as string;
+        setPhotoBlobUrl(dataUrl);
+        setSelectedPhoto(dataUrl);
+      };
+      reader.readAsDataURL(blob);
     } catch (error) {
       toast({
         title: "Error",

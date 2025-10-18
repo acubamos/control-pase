@@ -432,21 +432,6 @@ export default function VehicleEntrySystem() {
     return formatDateTimeTo12h(dateString);
   };
 
-  // const handleViewPhoto = async (entryId: string) => {
-  //   try {
-  //     const blob = await apiService.getPhoto(entryId);
-  //     const url = URL.createObjectURL(blob);
-  //     setPhotoBlobUrl(url);
-  //     setSelectedPhoto(url);
-  //   } catch (error) {
-  //     toast({
-  //       title: "Error",
-  //       description: "No se pudo cargar la foto",
-  //       variant: "destructive",
-  //     });
-  //   }
-  // };
-
   const handleViewPhoto = async (entryId: string) => {
     try {
       const blob = await apiService.getPhoto(entryId);
