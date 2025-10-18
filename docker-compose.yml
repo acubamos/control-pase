@@ -80,7 +80,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
-      - ./uploads:/app/uploads
+      - ./uploads:/app/public/uploads
     mem_limit: 512m      # Limita la RAM a 512 MB
     cpus: 0.5            # Limita el uso de CPU a medio núcleo
     networks:
