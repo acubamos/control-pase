@@ -64,6 +64,7 @@ services:
       - "traefik.http.routers.apicp-router.rule=Host(`apicp.acubamos.cu`)"  # Cambia el nombre del router
       - "traefik.http.routers.apicp-router.entrypoints=websecure"
       - "traefik.http.routers.apicp-router.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.apicp-router.middlewares=security-headers@file"
       - "traefik.http.services.apicp-service.loadbalancer.server.port=3001"  # Cambia el nombre del servicio
       - "traefik.docker.network=proxy"
 
@@ -88,6 +89,7 @@ services:
       - "traefik.http.routers.control.rule=Host(`siscop.acubamos.cu`)"
       - "traefik.http.routers.control.entrypoints=websecure"
       - "traefik.http.routers.control.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.control.middlewares=security-headers@file"
       - "traefik.http.services.control.loadbalancer.server.port=3000"
       - "traefik.docker.network=proxy"
 
