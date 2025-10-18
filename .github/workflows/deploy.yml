@@ -73,10 +73,10 @@ jobs:
       run: npm run build  # Esto ejecuta "nest build"
 
     - name: 🧪 Ejecutar tests unitarios
-      run: npm test  # Ejecuta "jest"
+      run: npm test -- --passWithNoTests # Ejecuta "jest"
 
     - name: 📊 Tests de cobertura
-      run: npm run test:cov -- --passWithNoTests  # Ejecuta "jest --coverage"
+      run: npm run test:cov  # Ejecuta "jest --coverage"
 
     # - name: 🔍 Tests e2e (opcional)
     #   run: npm run test:e2e -- --passWithNoTests  # Si quieres ejecutar end-to-end tests
