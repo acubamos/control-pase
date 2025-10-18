@@ -10,7 +10,7 @@ async function bootstrap() {
     origin: [
       "http://localhost:3000", 
       "http://localhost:3001",
-      "https://control.acubamos.cu",
+      "https://siscop.acubamos.cu",
       "https://apicp.acubamos.cu"
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
