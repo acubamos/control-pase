@@ -43,98 +43,122 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | null>(null);
 
+  // Agrega esta función para limpiar permisos en caché
+  const resetCameraPermissions = async () => {
+    try {
+      // Cerrar todos los streams activos primero
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+
+      // Forzar al navegador a olvidar permisos temporales
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      devices.forEach((device) => {
+        if (device.kind === "videoinput") {
+          console.log(`Cámara encontrada: ${device.label}`);
+        }
+      });
+    } catch (error) {
+      console.log("Error resetando permisos:", error);
+    }
+  };
   const startCamera = async () => {
+    resetCameraPermissions();
     try {
       setError(null);
       setIsScanning(true);
       setScanningStatus("Diagnosticando cámara...");
-  
+
       // ✅ 1. Verificar el estado real de los permisos
-      const cameraPermission = await navigator.permissions.query({ name: 'camera' as any });
-      console.log('📋 Estado de permisos:', cameraPermission.state);
-  
-      if (cameraPermission.state === 'denied') {
-        throw new Error('PERMISSION_DENIED');
+      const cameraPermission = await navigator.permissions.query({
+        name: "camera" as any,
+      });
+      console.log("📋 Estado de permisos:", cameraPermission.state);
+
+      if (cameraPermission.state === "denied") {
+        throw new Error("PERMISSION_DENIED");
       }
-  
+
       // ✅ 2. Listar cámaras disponibles
       setScanningStatus("Buscando cámaras...");
       const devices = await navigator.mediaDevices.enumerateDevices();
-      const cameras = devices.filter(device => device.kind === 'videoinput');
-      
-      console.log('📷 Cámaras detectadas:', cameras);
-      
+      const cameras = devices.filter((device) => device.kind === "videoinput");
+
+      console.log("📷 Cámaras detectadas:", cameras);
+
       if (cameras.length === 0) {
-        throw new Error('NO_CAMERAS_FOUND');
+        throw new Error("NO_CAMERAS_FOUND");
       }
-  
+
       // ✅ 3. Verificar si las cámaras tienen label (indicador de permisos)
-      const hasGrantedPermission = cameras.some(camera => camera.label !== '');
-      console.log('🔐 Permisos otorgados:', hasGrantedPermission);
-  
-      if (!hasGrantedPermission && cameraPermission.state === 'prompt') {
-        console.log('🔄 Solicitando permisos...');
+      const hasGrantedPermission = cameras.some(
+        (camera) => camera.label !== ""
+      );
+      console.log("🔐 Permisos otorgados:", hasGrantedPermission);
+
+      if (!hasGrantedPermission && cameraPermission.state === "prompt") {
+        console.log("🔄 Solicitando permisos...");
       }
-  
+
       // ✅ 4. Estrategia de constraints mejorada
       const constraints = [
         // Primero intentar con cámara trasera
-        { 
-          video: { 
+        {
+          video: {
             facingMode: { ideal: "environment" },
             width: { ideal: 1280 },
-            height: { ideal: 720 }
-          } 
+            height: { ideal: 720 },
+          },
         },
         // Luego cualquier cámara
-        { 
-          video: { 
+        {
+          video: {
             width: { ideal: 1280 },
-            height: { ideal: 720 }
-          } 
+            height: { ideal: 720 },
+          },
         },
         // Finalmente resoluciones más bajas
-        { video: true }
+        { video: true },
       ];
-  
+
       let stream: MediaStream | null = null;
       let lastError: Error | null = null;
-  
+
       for (const constraint of constraints) {
         try {
           setScanningStatus(`Probando configuración...`);
-          console.log('🔧 Intentando con constraints:', constraint);
-          
+          console.log("🔧 Intentando con constraints:", constraint);
+
           stream = await navigator.mediaDevices.getUserMedia(constraint);
-          console.log('✅ Éxito con constraints:', constraint);
+          console.log("✅ Éxito con constraints:", constraint);
           break;
         } catch (err) {
-          console.warn('❌ Falló con constraints:', constraint, err);
+          console.warn("❌ Falló con constraints:", constraint, err);
           lastError = err as Error;
           continue;
         }
       }
-  
+
       if (!stream) {
-        throw lastError || new Error('UNKNOWN_CAMERA_ERROR');
+        throw lastError || new Error("UNKNOWN_CAMERA_ERROR");
       }
-  
+
       streamRef.current = stream;
-  
+
       // ✅ 5. Configurar la cámara
       const videoTrack = stream.getVideoTracks()[0];
-      console.log('🎥 Track de video:', videoTrack.label);
-  
+      console.log("🎥 Track de video:", videoTrack.label);
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
-  
+
       setScanningStatus("🔍 Escaneando QR...");
       scanFrame();
-  
     } catch (err) {
-      console.error('❌ Error detallado:', err);
+      console.error("❌ Error detallado:", err);
       const errorMessage = diagnoseCameraError(err as Error);
       setError(errorMessage);
       setIsScanning(false);
@@ -144,10 +168,10 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   const diagnoseCameraError = (error: Error): string => {
     const errorName = error.name;
     const errorMessage = error.message;
-  
-    console.log('🔍 Diagnóstico - Name:', errorName, 'Message:', errorMessage);
-  
-    if (errorName === 'NotAllowedError' || errorMessage.includes('denied')) {
+
+    console.log("🔍 Diagnóstico - Name:", errorName, "Message:", errorMessage);
+
+    if (errorName === "NotAllowedError" || errorMessage.includes("denied")) {
       return `
         Permisos de cámara denegados. Por favor:
   
@@ -160,19 +184,29 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         • Limpia la caché y cookies del sitio
       `;
     }
-  
-    if (errorName === 'NotFoundError' || errorMessage.includes('no camera') || errorMessage.includes('NO_CAMERAS_FOUND')) {
+
+    if (
+      errorName === "NotFoundError" ||
+      errorMessage.includes("no camera") ||
+      errorMessage.includes("NO_CAMERAS_FOUND")
+    ) {
       return "No se encontró ninguna cámara en este dispositivo.";
     }
-  
-    if (errorName === 'NotSupportedError' || errorMessage.includes('not supported')) {
+
+    if (
+      errorName === "NotSupportedError" ||
+      errorMessage.includes("not supported")
+    ) {
       return "Tu navegador no soporta acceso a la cámara. Intenta con Chrome, Firefox o Safari.";
     }
-  
-    if (errorName === 'NotReadableError' || errorMessage.includes('already used')) {
+
+    if (
+      errorName === "NotReadableError" ||
+      errorMessage.includes("already used")
+    ) {
       return "La cámara está siendo usada por otra aplicación. Ciérrala e intenta nuevamente.";
     }
-  
+
     return `Error técnico: ${errorMessage}. Recarga la página e intenta nuevamente.`;
   };
 
