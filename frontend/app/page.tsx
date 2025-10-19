@@ -513,13 +513,13 @@ export default function VehicleEntrySystem() {
               />
               <h1 className="text-xl font-semibold text-gray-900">SISCOP</h1>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center">
               <Button
                 onClick={() => setCurrentView("history")}
                 variant="outline"
                 size="sm"
               >
-                <History className="h-4 w-4 mr-2" />
+                <History className="h-4 w-4" />
                 Historial
               </Button>
               <UserMenu onLogout={handleLogout} />
