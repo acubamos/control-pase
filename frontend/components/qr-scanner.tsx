@@ -47,62 +47,133 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
     try {
       setError(null);
       setIsScanning(true);
-      setScanningStatus("Iniciando cámara...");
-
-      // 1️⃣ - Abrimos la cámara sin forzar resolución
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: "environment" },
-          // width: { ideal: 640 },
-          // height: { ideal: 480 },               
+      setScanningStatus("Diagnosticando cámara...");
+  
+      // ✅ 1. Verificar el estado real de los permisos
+      const cameraPermission = await navigator.permissions.query({ name: 'camera' as any });
+      console.log('📋 Estado de permisos:', cameraPermission.state);
+  
+      if (cameraPermission.state === 'denied') {
+        throw new Error('PERMISSION_DENIED');
+      }
+  
+      // ✅ 2. Listar cámaras disponibles
+      setScanningStatus("Buscando cámaras...");
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cameras = devices.filter(device => device.kind === 'videoinput');
+      
+      console.log('📷 Cámaras detectadas:', cameras);
+      
+      if (cameras.length === 0) {
+        throw new Error('NO_CAMERAS_FOUND');
+      }
+  
+      // ✅ 3. Verificar si las cámaras tienen label (indicador de permisos)
+      const hasGrantedPermission = cameras.some(camera => camera.label !== '');
+      console.log('🔐 Permisos otorgados:', hasGrantedPermission);
+  
+      if (!hasGrantedPermission && cameraPermission.state === 'prompt') {
+        console.log('🔄 Solicitando permisos...');
+      }
+  
+      // ✅ 4. Estrategia de constraints mejorada
+      const constraints = [
+        // Primero intentar con cámara trasera
+        { 
+          video: { 
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          } 
         },
-      });
-
-      streamRef.current = stream;
-
-      const videoTrack = stream.getVideoTracks()[0];
-      const capabilities = videoTrack.getCapabilities();
-      console.log("📷 Capacidades detectadas:", capabilities);
-
-      // 2️⃣ - Aplicamos enfoque continuo si está soportado
-      if (
-        capabilities.focusMode &&
-        capabilities.focusMode.includes("continuous")
-      ) {
+        // Luego cualquier cámara
+        { 
+          video: { 
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          } 
+        },
+        // Finalmente resoluciones más bajas
+        { video: true }
+      ];
+  
+      let stream: MediaStream | null = null;
+      let lastError: Error | null = null;
+  
+      for (const constraint of constraints) {
         try {
-          await videoTrack.applyConstraints({
-            advanced: [{ focusMode: "continuous" } as any],
-          });
-          console.log("✅ Enfoque continuo activado");
+          setScanningStatus(`Probando configuración...`);
+          console.log('🔧 Intentando con constraints:', constraint);
+          
+          stream = await navigator.mediaDevices.getUserMedia(constraint);
+          console.log('✅ Éxito con constraints:', constraint);
+          break;
         } catch (err) {
-          console.warn("⚠️ No se pudo aplicar enfoque continuo", err);
+          console.warn('❌ Falló con constraints:', constraint, err);
+          lastError = err as Error;
+          continue;
         }
       }
-
-      // 3️⃣ - Aplicamos un zoom suave si está disponible
-      // if (capabilities.zoom) {
-      //   await videoTrack.applyConstraints({
-      //     advanced: [{ zoom: capabilities.zoom.min }], // 👈 mínimo posible
-      //   });
-      // }
-
-      // 4️⃣ - Iniciamos el video
+  
+      if (!stream) {
+        throw lastError || new Error('UNKNOWN_CAMERA_ERROR');
+      }
+  
+      streamRef.current = stream;
+  
+      // ✅ 5. Configurar la cámara
+      const videoTrack = stream.getVideoTracks()[0];
+      console.log('🎥 Track de video:', videoTrack.label);
+  
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
-
-      setScanningStatus("📡 Escaneando...");
-      setTimeout(() => {
-        scanFrame();
-      }, 10000);
+  
+      setScanningStatus("🔍 Escaneando QR...");
+      scanFrame();
+  
     } catch (err) {
-      console.error("❌ Error iniciando cámara:", err);
-      setError(
-        "No se pudo acceder a la cámara. Asegúrate de permitir los permisos."
-      );
+      console.error('❌ Error detallado:', err);
+      const errorMessage = diagnoseCameraError(err as Error);
+      setError(errorMessage);
       setIsScanning(false);
     }
+  };
+
+  const diagnoseCameraError = (error: Error): string => {
+    const errorName = error.name;
+    const errorMessage = error.message;
+  
+    console.log('🔍 Diagnóstico - Name:', errorName, 'Message:', errorMessage);
+  
+    if (errorName === 'NotAllowedError' || errorMessage.includes('denied')) {
+      return `
+        Permisos de cámara denegados. Por favor:
+  
+        1. Haz clic en el ícono de 🔒 candado en la barra de direcciones
+        2. Asegúrate de que "Cámara" esté en "Permitir"
+        3. Recarga la página e intenta nuevamente
+  
+        Si el problema persiste:
+        • Verifica los permisos de cámara en configuración de tu navegador
+        • Limpia la caché y cookies del sitio
+      `;
+    }
+  
+    if (errorName === 'NotFoundError' || errorMessage.includes('no camera') || errorMessage.includes('NO_CAMERAS_FOUND')) {
+      return "No se encontró ninguna cámara en este dispositivo.";
+    }
+  
+    if (errorName === 'NotSupportedError' || errorMessage.includes('not supported')) {
+      return "Tu navegador no soporta acceso a la cámara. Intenta con Chrome, Firefox o Safari.";
+    }
+  
+    if (errorName === 'NotReadableError' || errorMessage.includes('already used')) {
+      return "La cámara está siendo usada por otra aplicación. Ciérrala e intenta nuevamente.";
+    }
+  
+    return `Error técnico: ${errorMessage}. Recarga la página e intenta nuevamente.`;
   };
 
   const stopCamera = () => {
