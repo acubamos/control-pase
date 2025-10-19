@@ -9,7 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -124,6 +124,8 @@ export default function VehicleEntrySystem() {
     getCurrentHavanaTime12h()
   );
 
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   // Estados del formulario
   const [formData, setFormData] = useState<CreateVehicleEntry>({
     nombre: "",
@@ -148,6 +150,70 @@ export default function VehicleEntrySystem() {
   >(null);
   const [photoBlobUrl, setPhotoBlobUrl] = useState<string | null>(null);
 
+  // Función para resetear el timer de inactividad
+  const resetInactivityTimer = useCallback(() => {
+    // Limpiar timer existente
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+    }
+
+    // Configurar nuevo timer (10 minutos)
+    inactivityTimerRef.current = setTimeout(() => {
+      handleAutoLogout();
+    }, 10 * 60 * 1000); // 10 minutos en milisegundos
+  }, []);
+
+  // Función para manejar el logout automático
+  const handleAutoLogout = useCallback(() => {
+    authService.logout();
+    setIsAuthenticated(false);
+    setCurrentView("main");
+    setCameraError(null);
+    
+    toast({
+      title: "Sesión cerrada",
+      description: "La sesión se ha cerrado por inactividad (10 minutos)",
+    });
+  }, []);
+
+  // Función para manejar actividad del usuario
+  const handleUserActivity = useCallback(() => {
+    if (isAuthenticated) {
+      resetInactivityTimer();
+    }
+  }, [isAuthenticated, resetInactivityTimer]);
+
+  // Configurar event listeners para detectar actividad
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Eventos que indican actividad del usuario
+      const events = [
+        'mousedown', 'mousemove', 'keypress', 'keydown', 'scroll', 
+        'touchstart', 'touchmove', 'click', 'input'
+      ];
+
+      // Agregar event listeners
+      events.forEach(event => {
+        document.addEventListener(event, handleUserActivity);
+      });
+
+      // Iniciar el timer
+      resetInactivityTimer();
+
+      // Cleanup function
+      return () => {
+        // Limpiar timer
+        if (inactivityTimerRef.current) {
+          clearTimeout(inactivityTimerRef.current);
+        }
+
+        // Remover event listeners
+        events.forEach(event => {
+          document.removeEventListener(event, handleUserActivity);
+        });
+      };
+    }
+  }, [isAuthenticated, handleUserActivity, resetInactivityTimer]);
   // Actualizar la hora actual cada minuto
   useEffect(() => {
     const timer = setInterval(() => {
@@ -238,6 +304,12 @@ export default function VehicleEntrySystem() {
   };
 
   const handleLogout = () => {
+    // Limpiar timer
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+    }
+    
+    authService.logout();
     setIsAuthenticated(false);
     setCurrentView("main");
     setCameraError(null);
@@ -262,6 +334,7 @@ export default function VehicleEntrySystem() {
       description: "Datos cargados desde el código QR",
       
     });
+    resetInactivityTimer();
   };
 
   const handleVehicleTypeChange = (type: string, checked: boolean) => {
@@ -391,6 +464,7 @@ export default function VehicleEntrySystem() {
 
       resetForm();
       loadEntries();
+      resetInactivityTimer();
     } catch (error) {
       toast({
         title: "Error",
