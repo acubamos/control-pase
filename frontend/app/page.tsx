@@ -513,7 +513,7 @@ export default function VehicleEntrySystem() {
               />
               <h1 className="text-xl font-semibold text-gray-900">SISCOP</h1>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               <Button
                 onClick={() => setCurrentView("history")}
                 variant="outline"
