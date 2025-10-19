@@ -17,11 +17,10 @@ interface QRScannerProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
 // ✅ Extensión local de tipos para capacidades no estándar
 declare global {
   interface MediaTrackCapabilities {
-    focusMode?: string[];
+    focusMode?: string[]; // algunos dispositivos devuelven ["continuous", "single-shot"]
     zoom?: {
       min: number;
       max: number;
@@ -44,87 +43,28 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | null>(null);
 
-  // ✅ 1. FUNCIÓN PARA VERIFICAR COMPATIBILIDAD
-  const checkCameraSupport = async (): Promise<MediaDeviceInfo[]> => {
-    // Verificar si la API existe
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      throw new Error("Tu navegador no soporta acceso a la cámara");
-    }
-
-    // Verificar permisos previos
-    try {
-      const permissions = await navigator.permissions.query({ name: "camera" as any });
-      if (permissions.state === 'denied') {
-        throw new Error("Permisos de cámara denegados previamente");
-      }
-    } catch (e) {
-      console.warn("No se pudo verificar permisos previos:", e);
-    }
-
-    // Verificar dispositivos disponibles
-    try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const videoDevices = devices.filter(device => device.kind === 'videoinput');
-      
-      if (videoDevices.length === 0) {
-        throw new Error("No se encontraron cámaras disponibles");
-      }
-      
-      console.log("📷 Cámaras disponibles:", videoDevices);
-      return videoDevices;
-    } catch (e) {
-      console.warn("No se pudieron enumerar dispositivos:", e);
-      throw new Error("No se pudieron detectar las cámaras disponibles");
-    }
-  };
-
-  // ✅ 2. ESTRATEGIA CON FALLBACKS PROGRESIVOS
-  const startCameraWithFallback = async (): Promise<MediaStream> => {
-    const constraints = [
-      // Intentar primero con cámara trasera
-      { video: { facingMode: { ideal: "environment" } } },
-      // Intentar con cualquier cámara
-      { video: true },
-      // Intentar con resoluciones más bajas
-      { video: { width: { max: 1280 }, height: { max: 720 } } },
-      { video: { width: { max: 640 }, height: { max: 480 } } }
-    ];
-
-    for (const constraint of constraints) {
-      try {
-        console.log("🔧 Intentando con constraints:", constraint);
-        const stream = await navigator.mediaDevices.getUserMedia(constraint);
-        console.log("✅ Éxito con constraints:", constraint);
-        return stream;
-      } catch (err) {
-        console.warn(`❌ Intento fallido con:`, constraint, err);
-        continue;
-      }
-    }
-    
-    throw new Error("No se pudo acceder a ninguna cámara con ninguna configuración");
-  };
-
   const startCamera = async () => {
     try {
       setError(null);
       setIsScanning(true);
-      setScanningStatus("Verificando compatibilidad...");
-
-      // ✅ 1. Verificar compatibilidad primero
-      await checkCameraSupport();
-
       setScanningStatus("Iniciando cámara...");
 
-      // ✅ 2. Usar estrategia con fallbacks
-      const stream = await startCameraWithFallback();
+      // 1️⃣ - Abrimos la cámara sin forzar resolución
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          // width: { ideal: 640 },
+          // height: { ideal: 480 },               
+        },
+      });
+
       streamRef.current = stream;
 
       const videoTrack = stream.getVideoTracks()[0];
       const capabilities = videoTrack.getCapabilities();
       console.log("📷 Capacidades detectadas:", capabilities);
 
-      // 3️⃣ - Aplicamos enfoque continuo si está soportado
+      // 2️⃣ - Aplicamos enfoque continuo si está soportado
       if (
         capabilities.focusMode &&
         capabilities.focusMode.includes("continuous")
@@ -139,6 +79,13 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
         }
       }
 
+      // 3️⃣ - Aplicamos un zoom suave si está disponible
+      // if (capabilities.zoom) {
+      //   await videoTrack.applyConstraints({
+      //     advanced: [{ zoom: capabilities.zoom.min }], // 👈 mínimo posible
+      //   });
+      // }
+
       // 4️⃣ - Iniciamos el video
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -148,39 +95,14 @@ export function QRScanner({ onScan, isOpen, onClose }: QRScannerProps) {
       setScanningStatus("📡 Escaneando...");
       setTimeout(() => {
         scanFrame();
-      }, 800);
+      }, 10000);
     } catch (err) {
       console.error("❌ Error iniciando cámara:", err);
-      setError(getUserFriendlyError(err));
+      setError(
+        "No se pudo acceder a la cámara. Asegúrate de permitir los permisos."
+      );
       setIsScanning(false);
     }
-  };
-
-  // ✅ 3. FUNCIÓN PARA MENSAJES DE ERROR AMIGABLES
-  const getUserFriendlyError = (error: Error): string => {
-    const message = error.message.toLowerCase();
-    
-    if (message.includes('permission') || message.includes('denied')) {
-      return "Permiso de cámara denegado. Por favor, habilita los permisos en configuración de tu navegador.";
-    }
-    
-    if (message.includes('not found') || message.includes('no device') || message.includes('no se encontraron')) {
-      return "No se encontró ninguna cámara disponible en este dispositivo.";
-    }
-    
-    if (message.includes('not supported') || message.includes('no soporta')) {
-      return "Tu navegador no soporta acceso a la cámara. Intenta con Chrome, Firefox o Safari.";
-    }
-    
-    if (message.includes('could not start') || message.includes('being used')) {
-      return "La cámara está siendo usada por otra aplicación. Ciérrala e intenta nuevamente.";
-    }
-    
-    if (message.includes('ninguna configuración')) {
-      return "No se pudo acceder a la cámara con ninguna configuración. Intenta reiniciar el navegador.";
-    }
-    
-    return "Error al acceder a la cámara. Verifica los permisos e intenta recargar la página.";
   };
 
   const stopCamera = () => {
