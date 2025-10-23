@@ -7,9 +7,10 @@ export interface User {
   role: string
   permissions: {
     canViewHistory: boolean
-    canManageUsers: boolean
-    canExportData: boolean
-    canManualCleanup: boolean
+    canCreateEntries: boolean
+    canEditEntries: boolean
+    canViewStatistics:boolean
+    canViewEntries:boolean
   }
 }
 
@@ -66,6 +67,7 @@ class AuthService {
       }
     }
   }
+  
 
   logout(): void {
     localStorage.removeItem(this.TOKEN_KEY)

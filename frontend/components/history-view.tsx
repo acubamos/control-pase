@@ -92,7 +92,6 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
         title: "Error",
         description: "No se pudieron cargar las entradas",
         variant: "destructive",
-        
       });
     } finally {
       setIsLoading(false);
@@ -194,7 +193,6 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
         title: "Error",
         description: "No se pudo cargar la foto",
         variant: "destructive",
-        
       });
     }
   };
@@ -240,7 +238,6 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
       toast({
         title: "Éxito",
         description: "Salida registrada correctamente",
-        
       });
 
       loadEntries();
@@ -249,7 +246,6 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
         title: "Error",
         description: "No se pudo registrar la salida",
         variant: "destructive",
-        
       });
     }
   };
@@ -308,83 +304,87 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
       <div className="flex-1">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Estadísticas */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <BarChart3 className="h-6 w-6 text-blue-600" />
+          {/* Estadísticas - Solo mostrar si tiene permiso */}
+          {authService.getCurrentUser()?.permissions?.canViewStatistics && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="p-2 bg-blue-100 rounded-lg">
+                      <BarChart3 className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">
+                        Total Entradas
+                      </p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {stats.total}
+                      </p>
+                    </div>
                   </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">
-                      Total Entradas
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {stats.total}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <Users className="h-6 w-6 text-green-600" />
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="p-2 bg-green-100 rounded-lg">
+                      <Users className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">
+                        Con Salida
+                      </p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {stats.withExit}
+                      </p>
+                    </div>
                   </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">
-                      Con Salida
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {stats.withExit}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-yellow-100 rounded-lg">
-                    <Clock className="h-6 w-6 text-yellow-600" />
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="p-2 bg-yellow-100 rounded-lg">
+                      <Clock className="h-6 w-6 text-yellow-600" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">
+                        Sin Salida
+                      </p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {stats.withoutExit}
+                      </p>
+                    </div>
                   </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">
-                      Sin Salida
-                    </p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {stats.withoutExit}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex items-center">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <TrendingUp className="h-6 w-6 text-purple-600" />
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center">
+                    <div className="p-2 bg-purple-100 rounded-lg">
+                      <TrendingUp className="h-6 w-6 text-purple-600" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">Hoy</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {stats.todayEntries}
+                      </p>
+                    </div>
                   </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">Hoy</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {stats.todayEntries}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* Controles */}
           <Card className="mb-6">
             <CardContent className="p-6">
               <div className="flex flex-col lg:flex-row gap-4">
                 {/* Búsqueda */}
+                {/* Botones de acción */}
                 {/* Botones de acción */}
                 <div className="flex gap-2">
                   <Button
@@ -395,7 +395,11 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                     <Filter className="h-4 w-4 mr-2" />
                     Filtros
                   </Button>
-                  <ExportMenu entries={filteredEntries} />
+
+                  {/* Solo mostrar Exportar si NO es admin_semanal */}
+                  {user?.role !== "admin_semanal" && (
+                    <ExportMenu entries={filteredEntries} />
+                  )}
                 </div>
               </div>
 

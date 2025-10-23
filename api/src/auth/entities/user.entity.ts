@@ -55,7 +55,7 @@ export class User {
 
     switch (this.role) {
       case UserRole.DAILY_ADMIN:  return { ...basePermissions }
-      case UserRole.WEEKLY_ADMIN: return { ...basePermissions, ...otherPermisions }
+      case UserRole.WEEKLY_ADMIN: return { ...basePermissions, ...canViewHistory  }
       case UserRole.YEARLY_ADMIN: return { ...basePermissions, ...otherPermisions }
 
       default:

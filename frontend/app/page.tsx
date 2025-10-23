@@ -169,7 +169,7 @@ export default function VehicleEntrySystem() {
     setIsAuthenticated(false);
     setCurrentView("main");
     setCameraError(null);
-    
+
     toast({
       title: "Sesión cerrada",
       description: "La sesión se ha cerrado por inactividad (10 minutos)",
@@ -188,12 +188,19 @@ export default function VehicleEntrySystem() {
     if (isAuthenticated) {
       // Eventos que indican actividad del usuario
       const events = [
-        'mousedown', 'mousemove', 'keypress', 'keydown', 'scroll', 
-        'touchstart', 'touchmove', 'click', 'input'
+        "mousedown",
+        "mousemove",
+        "keypress",
+        "keydown",
+        "scroll",
+        "touchstart",
+        "touchmove",
+        "click",
+        "input",
       ];
 
       // Agregar event listeners
-      events.forEach(event => {
+      events.forEach((event) => {
         document.addEventListener(event, handleUserActivity);
       });
 
@@ -208,7 +215,7 @@ export default function VehicleEntrySystem() {
         }
 
         // Remover event listeners
-        events.forEach(event => {
+        events.forEach((event) => {
           document.removeEventListener(event, handleUserActivity);
         });
       };
@@ -294,7 +301,6 @@ export default function VehicleEntrySystem() {
         title: "Error",
         description: "No se pudieron cargar las entradas",
         variant: "destructive",
-        
       });
     }
   };
@@ -308,7 +314,7 @@ export default function VehicleEntrySystem() {
     if (inactivityTimerRef.current) {
       clearTimeout(inactivityTimerRef.current);
     }
-    
+
     authService.logout();
     setIsAuthenticated(false);
     setCurrentView("main");
@@ -332,7 +338,6 @@ export default function VehicleEntrySystem() {
     toast({
       title: "QR Escaneado",
       description: "Datos cargados desde el código QR",
-      
     });
     resetInactivityTimer();
   };
@@ -398,7 +403,6 @@ export default function VehicleEntrySystem() {
       toast({
         title: "Éxito",
         description: "Salida registrada correctamente",
-        
       });
 
       loadEntries();
@@ -407,7 +411,6 @@ export default function VehicleEntrySystem() {
         title: "Error",
         description: "No se pudo registrar la salida",
         variant: "destructive",
-        
       });
     }
   };
@@ -422,7 +425,6 @@ export default function VehicleEntrySystem() {
           title: "Validación",
           description: "Debe seleccionar al menos un tipo de vehículo.",
           variant: "destructive",
-          
         });
         setIsSubmitting(false);
         return;
@@ -436,7 +438,6 @@ export default function VehicleEntrySystem() {
           title: "Validación",
           description: "Debe seleccionar al menos un lugar de destino.",
           variant: "destructive",
-          
         });
         setIsSubmitting(false);
         return;
@@ -447,7 +448,6 @@ export default function VehicleEntrySystem() {
         toast({
           title: "Éxito",
           description: "Entrada actualizada correctamente",
-          
         });
       } else {
         const entryData = {
@@ -458,7 +458,6 @@ export default function VehicleEntrySystem() {
         toast({
           title: "Éxito",
           description: "Entrada registrada correctamente",
-          
         });
       }
 
@@ -473,7 +472,6 @@ export default function VehicleEntrySystem() {
             ? error.message
             : "Error al procesar la entrada",
         variant: "destructive",
-        
       });
     } finally {
       setIsSubmitting(false);
@@ -508,7 +506,6 @@ export default function VehicleEntrySystem() {
       title: "Error de cámara",
       description: error,
       variant: "destructive",
-      
     });
   };
 
@@ -533,7 +530,6 @@ export default function VehicleEntrySystem() {
         title: "Error",
         description: "No se pudo cargar la foto",
         variant: "destructive",
-        
       });
     }
   };
@@ -588,14 +584,17 @@ export default function VehicleEntrySystem() {
               <h1 className="text-xl font-semibold text-gray-900">SISCOP</h1>
             </div>
             <div className="flex items-center">
-              <Button
-                onClick={() => setCurrentView("history")}
-                variant="outline"
-                size="sm"
-              >
-                <History className="h-4 w-4" />
-                Historial
-              </Button>
+              {/* Botón de Historial - Solo visible si tiene permiso */}
+              {authService.getCurrentUser()?.permissions?.canViewHistory && (
+                <Button
+                  onClick={() => setCurrentView("history")}
+                  variant="outline"
+                  size="sm"
+                >
+                  <History className="h-4 w-4" />
+                  Historial
+                </Button>
+              )}
               <UserMenu onLogout={handleLogout} />
             </div>
           </div>
