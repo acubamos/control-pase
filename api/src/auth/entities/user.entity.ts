@@ -41,22 +41,18 @@ export class User {
       canCreateEntries: true,
       canEditEntries: true,
       canViewEntries: true,
-      //canDeleteEntries: true,
     };
     const otherPermisions = {
-      //canDeleteEntries: true,
-      canViewHistory: true,
-      canViewStatistics: true,
-      //canDeleteEntries: false,
-      //canViewHistory: false,
-      //canManualCleanup: false,
-      //canViewStatistics: false,
+      canViewStatistics: true,     
+    };
+    const otherPermisions2 = {
+      canViewHistory: true,      
     };
 
     switch (this.role) {
       case UserRole.DAILY_ADMIN:  return { ...basePermissions }
-      case UserRole.WEEKLY_ADMIN: return { ...basePermissions, ...canViewHistory  }
-      case UserRole.YEARLY_ADMIN: return { ...basePermissions, ...otherPermisions }
+      case UserRole.WEEKLY_ADMIN: return { ...basePermissions, ...otherPermisions2  }
+      case UserRole.YEARLY_ADMIN: return { ...basePermissions, ...otherPermisions, ...otherPermisions2 }
 
       default:
         return basePermissions
@@ -64,46 +60,3 @@ export class User {
   }
 }
 
-
-
-//   getPermissions() {
-//     const basePermissions = {
-//       canCreateEntries: true,
-//       canEditEntries: true,
-//       canViewEntries: true,
-//       //canDeleteEntries: true,
-//     }
-
-//     switch (this.role) {
-//       case UserRole.DAILY_ADMIN:
-//         return {
-//           ...basePermissions,
-//           canDeleteEntries: false,
-//           canViewHistory: false,
-//           canManualCleanup: false,
-//           canViewStatistics: false,
-//         }
-
-//       case UserRole.WEEKLY_ADMIN:
-//         return {
-//           ...basePermissions,
-//           canDeleteEntries: true,
-//           canViewHistory: true,
-//           canManualCleanup: false,
-//           canViewStatistics: true,
-//         }
-
-//       case UserRole.YEARLY_ADMIN:
-//         return {
-//           ...basePermissions,
-//           canDeleteEntries: true,
-//           canViewHistory: true,
-//           canManualCleanup: true,
-//           canViewStatistics: true,
-//         }
-
-//       default:
-//         return basePermissions
-//     }
-//   }
-// }
