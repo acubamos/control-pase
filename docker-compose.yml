@@ -4,8 +4,8 @@ services:
     image: postgres:17-alpine
 #    container_name: siscop-db
     restart: unless-stopped
-    mem_limit: 512m      # Limita la RAM a 512 MB
-    cpus: 0.5            # Limita el uso de CPU a medio núcleo
+    mem_limit: 2g      # Limita la RAM a 512 MB
+    cpus: 2.0            # Limita el uso de CPU a medio núcleo
     expose:
        - "5432"
     ports:
@@ -32,8 +32,8 @@ services:
       context: ./api
 #    container_name: siscop-api
     restart: always
-    mem_limit: 512m      # Limita la RAM a 512 MB
-    cpus: 0.5            # Limita el uso de CPU a medio núcleo
+    mem_limit: 1g      # Limita la RAM a 512 MB
+    cpus: 1.0            # Limita el uso de CPU a medio núcleo
     user: "1001:1001"
     environment:
       DB_HOST: ${DB_HOST}
