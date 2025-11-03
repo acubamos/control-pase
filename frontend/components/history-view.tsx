@@ -1,4 +1,4 @@
-"use client";
+"use client";ly
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -397,7 +397,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                   </Button>
 
                   {/* Solo mostrar Exportar si NO es admin_semanal */}
-                  {user?.role == "weekly_admin" && (
+                  {user?.role == "yearly_admin" && (
                     <ExportMenu entries={filteredEntries} />
                   )}
                 </div>
@@ -723,4 +723,5 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
     </div>
   );
 }
+
 
