@@ -397,7 +397,7 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                   </Button>
 
                   {/* Solo mostrar Exportar si NO es admin_semanal */}
-                  {user?.role == "admin_semanal" && (
+                  {user?.role == "weekly_admin" && (
                     <ExportMenu entries={filteredEntries} />
                   )}
                 </div>
@@ -723,3 +723,4 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
     </div>
   );
 }
+
