@@ -1,4 +1,4 @@
-"use client";ly
+"use client";
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -723,5 +723,6 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
     </div>
   );
 }
+
 
 
