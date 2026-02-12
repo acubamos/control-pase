@@ -7,9 +7,9 @@ services:
     mem_limit: 2g      # Limita la RAM a 512 MB
     cpus: 2.0            # Limita el uso de CPU a medio núcleo
     expose:
-       - "5432"
+      - "5432"
     ports:
-      - "127.0.0.1:5433:5432"
+      - 127.0.0.1:5432:5432
     environment:
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}

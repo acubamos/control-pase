@@ -54,6 +54,21 @@ jobs:
         shell: bash
         working-directory: ./api
 
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: test_db
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U test_user -d test_db"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
     steps:
     - name: 🛎️ Checkout código
       uses: actions/checkout@v4
@@ -81,13 +96,13 @@ jobs:
       run: npm run test:cov || echo "⚠️ No hay tests para cobertura"
       continue-on-error: true
 
-    - name: 🗄️ Setup PostgreSQL para tests E2E
-      uses: harmon758/postgresql-action@v1
-      with:
-        postgresql version: '17'
-        postgresql db: test_db
-        postgresql user: test_user
-        postgresql password: test_password
+    # - name: 🗄️ Setup PostgreSQL para tests E2E
+    #   uses: harmon758/postgresql-action@v1
+    #   with:
+    #     postgresql version: '17'
+    #     postgresql db: test_db
+    #     postgresql user: test_user
+    #     postgresql password: test_password
 
     - name: 🔍 Tests e2e
       run: npm run test:e2e
