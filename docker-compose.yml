@@ -8,8 +8,8 @@ services:
     cpus: 2.0            # Limita el uso de CPU a medio núcleo
     expose:
       - "5432"
-    ports:
-      - 127.0.0.1:5433:5432
+    # ports:
+    #   - 127.0.0.1:5433:5432
     environment:
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -26,6 +26,34 @@ services:
       - /etc/timezone:/etc/timezone:ro
     networks:
       - internal 
+
+  siscopadminer:
+    image: adminer:5.4.2
+#    container_name: siscop-adminer
+    restart: always
+    depends_on:
+      - siscop-db
+    networks:
+      - proxy
+      - internal-tienda
+    expose:
+      - "8081"
+    tmpfs:
+      - /tmp:rw,size=64m,mode=1777
+    healthcheck:
+      test: ["CMD","curl","-fsS","http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.siscopdb.rule=Host(`siscopdb.acubamos.cu`)"
+      - "traefik.http.routers.siscopdb.entrypoints=websecure"
+      - "traefik.http.routers.siscopdb.tls.certresolver=letsencrypt"
+      - "traefik.http.services.siscopdb.loadbalancer.server.port=8080"
+      - "traefik.http.services.siscopdb.loadbalancer.serversTransport=wordpress-timeouts@file"
+      - traefik.docker.network=proxy
 
   api:
     build:
