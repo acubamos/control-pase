@@ -7,6 +7,7 @@ import { RolesGuard } from "./guards/roles.guard";
 import { Roles } from "./decorators/roles.decorator";
 import { GetUser } from "./decorators/get-user.decorator";
 import { User, UserRole } from "./entities/user.entity"; // ← Quita 'type'
+import * as bcrypt from 'bcrypt';
 
 @Controller("auth")
 export class AuthController {
