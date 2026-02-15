@@ -171,6 +171,16 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
     setSelectedEntries(checked ? filteredEntries.map((entry) => entry.id) : []);
   };
 
+  // Función para obtener las entradas seleccionadas
+  const getSelectedEntries = (): VehicleEntry[] => {
+    if (selectedEntries.length === 0) {
+      return filteredEntries; // Si no hay selección, exportar todas las filtradas
+    }
+    
+    // Filtrar las entradas que están en selectedEntries
+    return entries.filter(entry => selectedEntries.includes(entry.id));
+  };
+
   const handlePhotoUploaded = () => {
     loadEntries();
     setSelectedEntryForPhoto(null);
@@ -397,8 +407,8 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
                   </Button>
 
                   {/* Solo mostrar Exportar si NO es admin_semanal */}
-                  {user?.role == "admin_semanal" && (
-                    <ExportMenu entries={filteredEntries} />
+                  {user?.role == "yearly_admin" && (
+                    <ExportMenu entries={getSelectedEntries()} />
                   )}
                 </div>
               </div>
@@ -545,7 +555,14 @@ export function HistoryView({ onBack, onLogout }: HistoryViewProps) {
           <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
-                <CardTitle>Entradas ({filteredEntries.length})</CardTitle>
+                <CardTitle>
+                  Entradas ({filteredEntries.length})
+                  {selectedEntries.length > 0 && (
+                    <span className="text-sm font-normal text-blue-600 ml-2">
+                      ({selectedEntries.length} seleccionadas)
+                    </span>
+                  )}
+                </CardTitle>
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     checked={

@@ -4,12 +4,12 @@ services:
     image: postgres:17-alpine
 #    container_name: siscop-db
     restart: unless-stopped
-    mem_limit: 512m      # Limita la RAM a 512 MB
-    cpus: 0.5            # Limita el uso de CPU a medio núcleo
+    mem_limit: 2g      # Limita la RAM a 512 MB
+    cpus: 2.0            # Limita el uso de CPU a medio núcleo
     expose:
-       - "5432"
-    ports:
-      - "5433:5432"
+      - "5432"
+    # ports:
+    #   - 127.0.0.1:5433:5432
     environment:
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -27,13 +27,41 @@ services:
     networks:
       - internal 
 
+  siscopadminer:
+    image: adminer:5.4.2
+#    container_name: siscop-adminer
+    restart: always
+    depends_on:
+      - siscop-db
+    networks:
+      - proxy
+      - internal
+    expose:
+      - "8081"
+    tmpfs:
+      - /tmp:rw,size=64m,mode=1777
+    healthcheck:
+      test: ["CMD","curl","-fsS","http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.siscopdb.rule=Host(`siscopdb.acubamos.cu`)"
+      - "traefik.http.routers.siscopdb.entrypoints=websecure"
+      - "traefik.http.routers.siscopdb.tls.certresolver=letsencrypt"
+      - "traefik.http.services.siscopdb.loadbalancer.server.port=8080"
+      - "traefik.http.services.siscopdb.loadbalancer.serversTransport=wordpress-timeouts@file"
+      - traefik.docker.network=proxy
+
   api:
     build:
       context: ./api
 #    container_name: siscop-api
     restart: always
-    mem_limit: 512m      # Limita la RAM a 512 MB
-    cpus: 0.5            # Limita el uso de CPU a medio núcleo
+    mem_limit: 1g      # Limita la RAM a 512 MB
+    cpus: 1.0            # Limita el uso de CPU a medio núcleo
     user: "1001:1001"
     environment:
       DB_HOST: ${DB_HOST}

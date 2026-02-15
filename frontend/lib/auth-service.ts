@@ -237,12 +237,12 @@ class AuthService {
     if (!user) return "";
 
     switch (user.role) {
-      case "daily_admin":
-        return "Administrador Diario";
-      case "weekly_admin":
-        return "Administrador Semanal";
-      case "yearly_admin":
-        return "Demo";
+      case "admin_diario":
+        return "Administrador Diario"
+      case "admin_semanal":
+        return "Administrador Semanal"
+      case "admin_anual":
+        return "Demo"
       default:
         return "Usuario";
     }
@@ -281,4 +281,5 @@ class AuthService {
   }
 }
 
-export const authService = new AuthService();
+export const authService = new AuthService()
+
