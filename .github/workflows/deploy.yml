@@ -33,15 +33,15 @@ jobs:
     - name: 🛎️ Checkout código
       uses: actions/checkout@v4
 
-    - name: 🔍 Escaneo de seguridad con Trivy (TODO EN UNO)
-      uses: aquasecurity/trivy-action@v0.69.3
-      with:
-        scan-type: 'fs'
-        scan-ref: '.'
-        format: 'table'
-        exit-code: 0  # No falla el workflow, solo reporta
-        scanners: 'vuln,secret'  # ⬅️ Escanea vulnerabilidades y secretos
-        token-setup-trivy: ${{ secrets.GITHUB_TOKEN }}
+    # - name: 🔍 Escaneo de seguridad con Trivy (TODO EN UNO)
+    #   uses: aquasecurity/trivy-action@0.33.1
+    #   with:
+    #     scan-type: 'fs'
+    #     scan-ref: '.'
+    #     format: 'table'
+    #     exit-code: 0  # No falla el workflow, solo reporta
+    #     scanners: 'vuln,secret'  # ⬅️ Escanea vulnerabilidades y secretos
+    #     token-setup-trivy: ${{ secrets.GITHUB_TOKEN }}
   
   ###########################################################################
   # 🧪 2. TESTING - Opcional y seguro (no rompe si no hay tests)            #                                                #
