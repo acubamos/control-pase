@@ -32,22 +32,6 @@ jobs:
     steps:
     - name: 🛎️ Checkout código
       uses: actions/checkout@v4
-
-    - name: 🔍 Escaneo de seguridad con Trivy (TODO EN UNO)
-      run: |
-        # Instalar trivy v0.57.1
-        curl -sfL https://github.com/aquasecurity/trivy/releases/download/v0.57.1/trivy_0.57.1_Linux-64bit.deb -o trivy.deb
-        sudo dpkg -i trivy.deb
-        # Ejecutar escaneo
-        trivy fs --scanners vuln,secret --format table --exit-code 0 .
-      # uses: aquasecurity/trivy-action@0.29.0
-      # with:
-      #   scan-type: 'fs'
-      #   scan-ref: '.'
-      #   format: 'table'
-      #   exit-code: 0  # No falla el workflow, solo reporta
-      #   scanners: 'vuln,secret'  # ⬅️ Escanea vulnerabilidades y secretos
-      #   github-token: ${{ secrets.GITHUB_TOKEN }}
   
   ###########################################################################
   # 🧪 2. TESTING - Opcional y seguro (no rompe si no hay tests)            #                                                #
