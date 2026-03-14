@@ -28,7 +28,7 @@ class AuthService {
   private readonly USER_KEY = "auth_user";
   private readonly EXPIRY_KEY = "auth_expiry_date";
   private readonly EXPIRY_DAYS = 365; 
-  private readonly MASTER_PASSWORD_HASH = "$2b$10$X8WY5U7Q3E9R2T1Y6V8B9uZ2A1B3C4D5E6F7G8H9I0J1K2L3M4N5O6P7Q8R9S0T";
+
 
   constructor() {
     this.initializeExpiryDate();
