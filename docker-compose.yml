@@ -51,6 +51,7 @@ services:
       - "traefik.http.routers.siscopdb.rule=Host(`siscopdb.acubamos.cu`)"
       - "traefik.http.routers.siscopdb.entrypoints=websecure"
       - "traefik.http.routers.siscopdb.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.siscopdb.middlewares=internal-strict@file"
       - "traefik.http.services.siscopdb.loadbalancer.server.port=8080"
       - "traefik.http.services.siscopdb.loadbalancer.serversTransport=wordpress-timeouts@file"
       - traefik.docker.network=proxy
@@ -93,7 +94,7 @@ services:
       - "traefik.http.routers.apicp-router.rule=Host(`apicp.acubamos.cu`)"  # Cambia el nombre del router
       - "traefik.http.routers.apicp-router.entrypoints=websecure"
       - "traefik.http.routers.apicp-router.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.apicp-router.middlewares=security-headers@file"
+      - "traefik.http.routers.apicp-router.middlewares=public-api@file"
       - "traefik.http.services.apicp-service.loadbalancer.server.port=3001"  # Cambia el nombre del servicio
       - "traefik.docker.network=proxy"
 
@@ -116,11 +117,11 @@ services:
       - proxy
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.control.rule=Host(`siscop.acubamos.cu`)"
-      - "traefik.http.routers.control.entrypoints=websecure"
-      - "traefik.http.routers.control.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.control.middlewares=security-headers@file"
-      - "traefik.http.services.control.loadbalancer.server.port=3000"
+      - "traefik.http.routers.siscop.rule=Host(`siscop.acubamos.cu`)"
+      - "traefik.http.routers.siscop.entrypoints=websecure"
+      - "traefik.http.routers.siscop.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.siscop.middlewares=customer-portal-siscop@file"
+      - "traefik.http.services.siscop.loadbalancer.server.port=3000"
       - "traefik.docker.network=proxy"
 
 networks:
