@@ -25,7 +25,9 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
     networks:
-      - internal 
+      - internal
+    security_opt:
+      - no-new-privileges:true
 
   siscopadminer:
     image: adminer:5.4.2
@@ -55,6 +57,8 @@ services:
       - "traefik.http.services.siscopdb.loadbalancer.server.port=8080"
       - "traefik.http.services.siscopdb.loadbalancer.serversTransport=wordpress-timeouts@file"
       - traefik.docker.network=proxy
+    security_opt:
+      - no-new-privileges:true
 
   api:
     build:
@@ -91,21 +95,32 @@ services:
       - proxy
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.apicp-router.rule=Host(`apicp.acubamos.cu`)"  # Cambia el nombre del router
+      - "traefik.http.routers.apicp-router.rule=Host(`apicp.acubamos.cu`)"
       - "traefik.http.routers.apicp-router.entrypoints=websecure"
       - "traefik.http.routers.apicp-router.tls.certresolver=letsencrypt"
       - "traefik.http.routers.apicp-router.middlewares=public-api@file"
-      - "traefik.http.services.apicp-service.loadbalancer.server.port=3001"  # Cambia el nombre del servicio
+      - "traefik.http.services.apicp-service.loadbalancer.server.port=3001"
       - "traefik.docker.network=proxy"
+    security_opt:
+      - no-new-privileges:true
 
   frontend:
     build:
       context: ./frontend
 #    container_name: siscop-frontend
     restart: always
+    depends_on:
+      api:
+        condition: service_healthy
     environment:
       - TZ=America/Havana
       - PORT=3000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
@@ -123,6 +138,8 @@ services:
       - "traefik.http.routers.siscop.middlewares=customer-portal-siscop@file"
       - "traefik.http.services.siscop.loadbalancer.server.port=3000"
       - "traefik.docker.network=proxy"
+    security_opt:
+      - no-new-privileges:true
 
 networks:
   internal:
