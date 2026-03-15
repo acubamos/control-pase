@@ -21,6 +21,9 @@ FROM node:22.18.0-alpine3.22 AS production-stage
 
 WORKDIR /app
 
+# Instalar curl para healthcheck
+RUN apk add --no-cache curl
+
 # Instalar pnpm
 RUN npm install -g pnpm
 
